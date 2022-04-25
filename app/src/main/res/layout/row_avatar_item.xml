@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <import type="android.view.View" />
+        <variable
+            name="item"
+            type="com.amazon.ivs.chatdemo.repository.models.Avatar" />
+    </data>
+
+    <RelativeLayout
+        android:orientation="vertical"
+        android:layout_width="54dp"
+        android:layout_height="54dp"
+        android:padding="@dimen/padding_small"
+        android:clipToPadding="false"
+        android:clipChildren="false">
+
+        <FrameLayout
+            android:id="@+id/avatar_item"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_centerInParent="true"
+            android:background="@{item.isSelected ? @drawable/bg_button_yellow : @drawable/bg_button_round}"
+            android:elevation="@dimen/elevation_normal" />
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="@null"
+            android:layout_centerInParent="true"
+            android:translationZ="5dp"
+            app:loadImage="@{item.url}" />
+
+    </RelativeLayout>
+
+</layout>

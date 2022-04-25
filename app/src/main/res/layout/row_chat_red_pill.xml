@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+
+        <import type="android.view.View" />
+
+        <variable
+            name="item"
+            type="com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse" />
+    </data>
+
+    <LinearLayout
+        android:id="@+id/red_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_margin="@dimen/margin_small"
+        android:background="@drawable/bg_pill_red"
+        android:elevation="@dimen/elevation_normal"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/chat_sender"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/margin_medium"
+            android:gravity="center"
+            android:text= "@{@string/error_template(item.sender.userName)}"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/chat_icon"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Max" />
+
+        <TextView
+            android:id="@+id/chat_message"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/margin_medium"
+            android:layout_marginEnd="@dimen/margin_normal"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:text="@{item.content}"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/chat_sender"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Testing testing" />
+
+    </LinearLayout>
+
+</layout>

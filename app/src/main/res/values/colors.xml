@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#000000</color>
+    <color name="black_70">#B3000000</color>
+    <color name="black_light">#161616</color>
+    <color name="gray">#AAAAAA</color>
+    <color name="gray_dark">#636363</color>
+    <color name="white">#FFFFFF</color>
+    <color name="yellow">#FFE249</color>
+    <color name="yellow_accent">#FDD835</color>
+    <color name="brown">#6F5D2E</color>
+    <color name="brown_light">#9B8447</color>
+    <color name="red">#CC422F</color>
+    <color name="teal">#69FFF6</color>
+    <color name="green">#348D43</color>
+
+    <color name="moderate_message_background_color">#E6363636</color>
+
+    <color name="success_notification_title_color">#99FFFFFF</color>
+
+</resources>

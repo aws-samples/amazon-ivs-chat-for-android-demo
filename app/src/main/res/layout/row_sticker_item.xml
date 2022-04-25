@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <variable
+            name="sticker"
+            type="String" />
+    </data>
+
+    <FrameLayout
+        android:id="@+id/sticker_item"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:background="@drawable/bg_round_ripple">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:contentDescription="@null"
+            android:elevation="5dp"
+            android:scaleX="1.3"
+            android:scaleY="1.3"
+            app:loadImage="@{sticker}" />
+
+    </FrameLayout>
+
+</layout>

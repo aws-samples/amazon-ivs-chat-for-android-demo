@@ -1,0 +1,17 @@
+<resources>
+    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="margin_large">24dp</dimen>
+    <dimen name="margin_normal">16dp</dimen>
+    <dimen name="margin_medium">8dp</dimen>
+    <dimen name="margin_small">4dp</dimen>
+    <dimen name="padding_large">24dp</dimen>
+    <dimen name="padding_normal">16dp</dimen>
+    <dimen name="padding_medium">12dp</dimen>
+    <dimen name="padding_small">4dp</dimen>
+    <dimen name="elevation_normal">4dp</dimen>
+
+    <!-- Custom dimension -->
+    <dimen name="settings_start_padding">72dp</dimen>
+
+    <dimen name="main_button_height">48dp</dimen>
+</resources>

@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <data>
+        <import type="android.view.View" />
+        <variable
+            name="isLoggedIn"
+            type="Boolean" />
+        <variable
+            name="useCustomUrl"
+            type="Boolean" />
+        <variable
+            name="customUrl"
+            type="String" />
+    </data>
+
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/app_bar_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:animateLayoutChanges="true"
+            android:theme="@style/AppBarOverlay">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/toolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?attr/actionBarSize"
+                app:layout_scrollFlags="enterAlways|scroll"
+                android:background="?attr/colorPrimaryVariant"
+                app:popupTheme="@style/PopupOverlay" />
+
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@color/black_light"
+                android:layout_marginTop="@dimen/margin_large"
+                android:paddingStart="@dimen/settings_start_padding"
+                android:paddingEnd="@dimen/padding_normal">
+
+                <TextView
+                    android:id="@+id/custom_stream_title"
+                    android:textSize="16sp"
+                    android:textColor="@color/white"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/margin_normal"
+                    android:layout_marginEnd="@dimen/margin_normal"
+                    android:text="@string/custom_live_stream"
+                    app:layout_constraintEnd_toStartOf="@id/custom_stream_switch"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/custom_stream_switch"
+                    app:trackTint="@color/switch_track_state_list"
+                    app:thumbTint="@color/switch_thumb_state_list"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/margin_normal"
+                    android:checked="@{useCustomUrl, default = false}"
+                    app:layout_constraintBottom_toBottomOf="@id/custom_stream_title"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="@id/custom_stream_title" />
+
+                <View
+                    android:id="@+id/settings_divider"
+                    android:layout_width="match_parent"
+                    android:layout_height="1.5dp"
+                    android:background="@color/gray_dark"
+                    android:layout_marginTop="@dimen/margin_normal"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/custom_stream_title"
+                    app:layout_constraintEnd_toEndOf="parent" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <LinearLayout
+                android:id="@+id/playback_url_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_button"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/settings_start_padding"
+                android:paddingEnd="@dimen/padding_normal"
+                android:paddingTop="@dimen/padding_normal"
+                android:paddingBottom="@dimen/padding_normal"
+                android:clickable="@{useCustomUrl ? true : false}"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/settings_divider"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textColor="@color/white"
+                    android:visibility="@{useCustomUrl ? View.VISIBLE : View.GONE}"
+                    android:text="@string/playback_url" />
+
+                <TextView
+                    android:id="@+id/playback_url_value"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="@color/gray"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:visibility="@{useCustomUrl ? View.VISIBLE : View.GONE}"
+                    android:text="@{customUrl != null ? customUrl : @string/not_set, default = @string/not_set}" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="@color/gray"
+                    android:layout_marginTop="@dimen/margin_small"
+                    android:visibility="@{useCustomUrl ? View.GONE : View.VISIBLE}"
+                    android:text="@string/use_custom_stream" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/log_out_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_button"
+                android:orientation="vertical"
+                android:layout_marginTop="@dimen/margin_large"
+                android:paddingStart="@dimen/settings_start_padding"
+                android:paddingEnd="@dimen/padding_normal"
+                android:paddingTop="@dimen/padding_normal"
+                android:paddingBottom="@dimen/padding_normal"
+                android:visibility="@{isLoggedIn ? View.VISIBLE : View.GONE}"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/settings_divider"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textColor="@color/red"
+                    android:text="@string/log_out" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+</layout>
