@@ -17,7 +17,7 @@
             android:minHeight="48dp"
             android:layout_margin="4dp"
             android:elevation="@dimen/elevation_normal"
-            android:background="@drawable/bg_pill_teal_yellow">
+            android:background="@drawable/bg_pill_teal_ripple">
 
             <ImageView
                 android:id="@+id/chat_icon"
@@ -26,7 +26,7 @@
                 android:layout_margin="@dimen/margin_normal"
                 android:scaleType="centerCrop"
                 android:contentDescription="@null"
-                app:loadImage="@{item.sender.avatarSrc}"
+                app:loadImage="@{item.sender.avatar}"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toBottomOf="parent" />
@@ -39,7 +39,7 @@
                 android:textColor="@color/black"
                 android:textStyle="bold"
                 android:layout_marginStart="@dimen/margin_medium"
-                android:text="@{item.sender.userName}"
+                android:text="@{item.sender.username}"
                 tools:text="Max"
                 app:layout_constraintStart_toEndOf="@id/chat_icon"
                 app:layout_constraintTop_toTopOf="parent"

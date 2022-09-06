@@ -10,7 +10,6 @@ import com.amazon.ivs.chatdemo.common.extensions.showInputDialog
 import com.amazon.ivs.chatdemo.databinding.ActivitySettingsBinding
 import com.amazon.ivs.chatdemo.repository.ChatRepository
 import com.amazon.ivs.chatdemo.repository.cache.PreferenceProvider
-import kotlinx.coroutines.flow.collect
 import javax.inject.Inject
 
 class SettingsActivity : AppCompatActivity() {

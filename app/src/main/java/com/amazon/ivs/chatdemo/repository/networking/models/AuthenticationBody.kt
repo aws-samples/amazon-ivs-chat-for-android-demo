@@ -3,7 +3,7 @@ package com.amazon.ivs.chatdemo.repository.networking.models
 import com.amazon.ivs.chatdemo.BuildConfig
 
 data class AuthenticationBody(
-    val arn: String = BuildConfig.CHAT_ROOM_ID,
+    val roomIdentifier: String = BuildConfig.CHAT_ROOM_ID,
     val userId: String = "0",
     val attributes: AuthenticationAttributes,
     var capabilities: List<String> = mutableListOf<String>().apply {

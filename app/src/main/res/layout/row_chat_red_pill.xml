@@ -27,7 +27,7 @@
             android:layout_height="match_parent"
             android:layout_marginStart="@dimen/margin_medium"
             android:gravity="center"
-            android:text= "@{@string/error_template(item.sender.userName)}"
+            android:text= "@{@string/error_template(item.sender.username)}"
             android:textColor="@color/white"
             android:textSize="15sp"
             android:textStyle="bold"

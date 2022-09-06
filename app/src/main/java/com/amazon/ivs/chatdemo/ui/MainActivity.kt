@@ -30,7 +30,6 @@ import com.amazon.ivs.chatdemo.ui.adapters.ChatAdapter
 import com.amazon.ivs.chatdemo.ui.adapters.StickerAdapter
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collect
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -91,12 +90,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         App.component.inject(this)
+        lifecycle.addObserver(viewModel)
         binding = ActivityMainBinding.inflate(layoutInflater)
         popupBinding = ViewIntroductionPopupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         binding.moderateMessageItem.messagePill.setBackgroundResource(R.drawable.bg_pill)
-        binding.moderateStickerItem.stickerPill.setBackgroundResource(R.drawable.bg_pill_yellow)
+        binding.moderateStickerItem.stickerPill.setBackgroundResource(R.drawable.bg_pill_teal)
         binding.stickerLayout.stickerList.adapter = stickerAdapter
 
         stickerLayout.onStateChanged(binding.mainContent) {
@@ -258,7 +258,6 @@ class MainActivity : AppCompatActivity() {
 
         launchUI {
             viewModel.messages.collect { messages ->
-                Timber.d("Messages received: $messages")
                 messagesList = messages
                 chatAdapter.messages = messages
                 if (messages.isNotEmpty()) {
@@ -311,7 +310,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        viewModel.refreshToken()
         viewModel.collectAvatarAndStickers()
     }
 

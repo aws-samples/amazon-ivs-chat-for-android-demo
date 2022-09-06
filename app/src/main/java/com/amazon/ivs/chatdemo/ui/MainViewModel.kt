@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.util.Size
 import android.view.Surface
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import com.amazon.ivs.chatdemo.R
 import com.amazon.ivs.chatdemo.common.AVATARS
@@ -20,14 +22,13 @@ import com.amazonaws.ivs.player.Player
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import timber.log.Timber
 import kotlin.properties.Delegates
 
 class MainViewModel(
     private var preferenceProvider: PreferenceProvider,
     private var repository: ChatRepository
-) : ViewModel() {
+) : ViewModel(), DefaultLifecycleObserver {
 
     private var _isModerator = false
     private var listener: Player.Listener? = null
@@ -170,18 +171,19 @@ class MainViewModel(
         player?.release()
         player = null
         listener = null
-        repository.clearMessages()
+        repository.clearAllLocalMessages()
         _messages.tryEmit(emptyList())
     }
 
     fun sendMessage(message: String) {
-        val chatMessage = ChatMessageRequest(content = message)
+        val attributes = MessageAttributes(messageType = EVENT_MESSAGE)
+        val chatMessage = ChatMessageRequest(content = message, attributes = attributes)
         repository.sendMessage(chatMessage)
     }
 
     fun deleteMessage(message: ChatMessageResponse) {
         didCurrentUserDeleteMessage = _isModerator
-        repository.deleteMessage(DeleteMessageRequest(id = message.id))
+        repository.deleteMessage(message.id)
     }
 
     fun sendSticker(sticker: Sticker) {
@@ -195,11 +197,19 @@ class MainViewModel(
 
     fun kickUser(message: ChatMessageResponse) {
         didCurrentUserKickRemote = _isModerator
-        repository.kickUser(KickUserRequest(userId = message.sender.id))
+        message.sender?.id?.let { senderId ->
+            repository.kickUser(senderId)
+        }
     }
 
     fun updatePermission(grantPermissions: Boolean) {
         _isModerator = grantPermissions
         repository.updatePermissions(grantPermissions)
+    }
+
+    override fun onResume(owner: LifecycleOwner) {
+        // Currently just trying to connect to room after onPause does not work.
+        // Info taken from ChatSDK documentation.
+        repository.onResume(displayName, if (avatarIndex == -1) AVATARS.first().url else AVATARS[avatarIndex].url)
     }
 }

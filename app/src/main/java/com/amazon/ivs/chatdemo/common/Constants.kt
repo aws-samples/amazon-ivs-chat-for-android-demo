@@ -3,6 +3,9 @@ package com.amazon.ivs.chatdemo.common
 import com.amazon.ivs.chatdemo.repository.models.Avatar
 import com.amazon.ivs.chatdemo.repository.models.Sticker
 
+const val DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+const val REGION_URL = "us-west-2"
+
 val AVATARS get() = listOf(
     "https://d39ii5l128t5ul.cloudfront.net/assets/animals_square/bear.png",
     "https://d39ii5l128t5ul.cloudfront.net/assets/animals_square/bird.png",
