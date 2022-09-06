@@ -5,25 +5,29 @@ import android.os.Looper
 import com.amazon.ivs.chatdemo.common.MESSAGE_EXPIRATION_RETRY_TIME
 import com.amazon.ivs.chatdemo.common.MESSAGE_HISTORY
 import com.amazon.ivs.chatdemo.common.TOKEN_REFRESH_DELAY
+import com.amazon.ivs.chatdemo.common.chat.ChatManager
 import com.amazon.ivs.chatdemo.common.extensions.ConsumableSharedFlow
 import com.amazon.ivs.chatdemo.common.extensions.launchIO
 import com.amazon.ivs.chatdemo.common.extensions.onRepeat
-import com.amazon.ivs.chatdemo.common.extensions.toJson
-import com.amazon.ivs.chatdemo.repository.models.*
+import com.amazon.ivs.chatdemo.repository.models.ChatMessageRequest
+import com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse
+import com.amazon.ivs.chatdemo.repository.models.MessageViewType
+import com.amazon.ivs.chatdemo.repository.models.Sender
 import com.amazon.ivs.chatdemo.repository.networking.NetworkClient
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationAttributes
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationBody
+import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationResponse
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.collect
-import okhttp3.ResponseBody
 import timber.log.Timber
 import java.util.*
 
 class ChatRepository(
-    private val socketClient: SocketClient,
+    private val chatManager: ChatManager,
     private val networkClient: NetworkClient
 ) {
 
+    private var authBody:  AuthenticationResponse? = null
     private val uuid = UUID.randomUUID().toString()
     private val rawMessages = mutableListOf<ChatMessageResponse>()
     private val timeoutHandler = Handler(Looper.getMainLooper())
@@ -41,29 +45,31 @@ class ChatRepository(
 
     init {
         launchIO {
-            socketClient.onError.collect { error ->
-                if (error.rawCode == ErrorCode.DISCONNECTED_BY_MODERATOR.code) {
-                    userName = ""
-                    clearMessages()
-                    _onLocalKicked.tryEmit(Unit)
-                } else {
-                    rawMessages.add(ChatMessageResponse().apply {
-                        setNewViewType(MessageViewType.RED)
-                        sender.userName = error.rawCode.toString()
-                        content = error.rawError.toString()
-                    })
-                    _messages.tryEmit(rawMessages.map { it.copy() })
-                }
+            chatManager.onError.collect { error ->
+                rawMessages.add(ChatMessageResponse().apply {
+                    setNewViewType(MessageViewType.RED)
+                    sender = Sender("", if (error.rawCode == -1) "" else error.rawCode.toString(), "")
+                    content = error.rawError.toString()
+                })
+                _messages.tryEmit(rawMessages.map { it.copy() })
             }
         }
         launchIO {
-            socketClient.onUserKicked.collect { userId ->
+            chatManager.onRemoteKicked.collect { userId ->
+                val messagesToRemove = rawMessages.filter { it.sender?.id == userId }
+                removeUserLocalMessages(messagesToRemove)
                 _onRemoteKicked.tryEmit(Unit)
-                removeKickedUserMessages(userId)
             }
         }
         launchIO {
-            socketClient.onSocketConnected.collect {
+            chatManager.onLocalKicked.collect {
+                userName = ""
+                clearAllLocalMessages()
+                _onLocalKicked.tryEmit(Unit)
+            }
+        }
+        launchIO {
+            chatManager.onRoomConnected.collect {
                 if (userName.isNotBlank()) {
                     rawMessages.add(ChatMessageResponse().apply { setNewViewType(MessageViewType.GREEN) })
                     _messages.tryEmit(rawMessages.map { it.copy() })
@@ -71,15 +77,15 @@ class ChatRepository(
             }
         }
         launchIO {
-            socketClient.onDeleteMessage.collect { deleteMessageModel ->
-                rawMessages.firstOrNull { it.id == deleteMessageModel.attributes.messageId }?.let { message ->
+            chatManager.onMessageDeleted.collect { messageId ->
+                rawMessages.firstOrNull { it.id == messageId }?.let { message ->
                     rawMessages.remove(message)
                     _messages.tryEmit(rawMessages.map { it.copy() })
                 }
             }
         }
         launchIO {
-            socketClient.onMessage.collect { message ->
+            chatManager.onMessage.collect { message ->
                 if (rawMessages.contains(message)) return@collect
                 if (rawMessages.size == MESSAGE_HISTORY) {
                     rawMessages.removeFirst()
@@ -92,20 +98,27 @@ class ChatRepository(
     }
 
     fun sendMessage(chatMessage: ChatMessageRequest) {
-        Timber.d("Sending message: ${chatMessage.toJson()}")
-        socketClient.sendMessage(chatMessage.apply { id = uuid }.toJson())
+        chatManager.sendMessage(chatMessage)
     }
 
-    fun deleteMessage(body: DeleteMessageRequest) {
-        Timber.d("Deleting message: ${body.toJson()}")
-        socketClient.deleteMessage(body.toJson())
+    fun deleteMessage(id: String) {
+        Timber.d("Deleting message: $id")
+        chatManager.deleteMessage(id)
     }
 
-    fun kickUser(kickModel: KickUserRequest) = launchIO {
+    fun kickUser(userId: String) = launchIO {
         try {
-            socketClient.kickUser(kickModel.toJson())
             if (isModeratorGranted) {
-                networkClient.api.deleteAllMessages(DeleteAllMessagesRequest().apply { setUserId(kickModel.userId) })
+                chatManager.disconnectUser(userId)
+                val messagesToRemove = rawMessages.filter { it.sender?.id == userId }
+
+                launchIO {
+                    messagesToRemove.forEach { chatMessage ->
+                        delay(300) // Delay because calling too fast causes socket exception
+                        chatManager.deleteMessage(chatMessage.id)
+                    }
+                }
+                removeUserLocalMessages(messagesToRemove)
             }
         } catch (e: Exception) {
             Timber.d(e, "Kick error")
@@ -120,7 +133,7 @@ class ChatRepository(
         }
     }
 
-    fun clearMessages() {
+    fun clearAllLocalMessages() {
         rawMessages.clear()
         _messages.tryEmit(rawMessages.map { it.copy() })
     }
@@ -130,9 +143,8 @@ class ChatRepository(
         isModeratorGranted = isGranted
     }
 
-    private fun removeKickedUserMessages(userId: String) {
-        rawMessages.removeAll { it.sender.id == userId }
-        _messages.tryEmit(rawMessages.map { it.copy() })
+    fun onResume(userName: String, avatar: String) {
+        if (authBody == null) getToken(userName, avatar) else chatManager.onResume()
     }
 
     private fun getToken(userName: String, avatar: String) = launchIO {
@@ -141,7 +153,9 @@ class ChatRepository(
             val attributes = AuthenticationAttributes(username = userName, avatar = avatar)
             val body = AuthenticationBody(userId = uuid, attributes = attributes)
             body.addModeratorPermissions(isModeratorGranted)
-            handleTokenResponse(networkClient.api.authenticate(body))
+            authBody = networkClient.api.authenticate(body)
+            chatManager.initRoom(authBody!!, uuid)
+            chatManager.connect()
         } catch (e: Exception) {
             Timber.d(e, "Authentication error")
         }
@@ -155,9 +169,8 @@ class ChatRepository(
         timeoutHandler.postDelayed(timeoutRunnable, MESSAGE_EXPIRATION_RETRY_TIME)
     }
 
-    private fun handleTokenResponse(rawResponseBody: ResponseBody) {
-        val token = rawResponseBody.string()
-        Timber.d("Token received: $token")
-        socketClient.connect(token)
+    private fun removeUserLocalMessages(messagesToRemove: List<ChatMessageResponse>) {
+        rawMessages.removeAll(messagesToRemove)
+        _messages.tryEmit(rawMessages.map { it.copy() })
     }
 }

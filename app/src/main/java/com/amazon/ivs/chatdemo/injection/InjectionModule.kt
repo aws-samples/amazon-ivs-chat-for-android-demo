@@ -1,8 +1,9 @@
 package com.amazon.ivs.chatdemo.injection
 
 import com.amazon.ivs.chatdemo.App
+import com.amazon.ivs.chatdemo.common.chat.ChatManager
+import com.amazon.ivs.chatdemo.common.chat.ChatManagerImpl
 import com.amazon.ivs.chatdemo.repository.ChatRepository
-import com.amazon.ivs.chatdemo.repository.SocketClient
 import com.amazon.ivs.chatdemo.repository.cache.PreferenceProvider
 import com.amazon.ivs.chatdemo.repository.networking.NetworkClient
 import dagger.Module
@@ -14,8 +15,8 @@ class InjectionModule(private val app: App) {
 
     @Provides
     @Singleton
-    fun provideRepository(socketClient: SocketClient, networkClient: NetworkClient) =
-        ChatRepository(socketClient, networkClient)
+    fun provideRepository(chatManager: ChatManager, networkClient: NetworkClient) =
+        ChatRepository(chatManager, networkClient)
 
     @Provides
     @Singleton
@@ -23,10 +24,9 @@ class InjectionModule(private val app: App) {
 
     @Provides
     @Singleton
-    fun provideSocketClient() = SocketClient()
+    fun provideChatManager(): ChatManager = ChatManagerImpl()
 
     @Provides
     @Singleton
     fun provideNetworkClient() = NetworkClient()
-
 }
