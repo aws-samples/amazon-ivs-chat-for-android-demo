@@ -22,9 +22,6 @@ To open the demo Android app, follow these instructions:
         * A sample playback url for a 24/7 livestream is pre-filled. You may add a playback url to use a custom livestream in this demo.
     * Amazon IVS Chat Demo backend endpoint `API_URL`
         * You must deploy the [Amazon IVS Chat Demo Backend](https://github.com/aws-samples/amazon-ivs-chat-web-demo/tree/main/serverless) to get this value.
-    * Chat websocket address `SOCKET_URL`
-        * The websocket endpoint for the chat room: `wss://edge.ivschat.<aws-region>.amazonaws.com`. 
-        * For example, if your chat room is located in `us-west-2`, the websocket endpoint would be `wss://edge.ivschat.us-west-2.amazonaws.com`.
     * Chat room id `CHAT_ROOM_ID`
         * The ID (or ARN) of the Amazon IVS Chat Room that the app should use.
         * You must create an Amazon IVS Chat Room to get a chat room ID/ARN. Refer to [Getting Started with Amazon IVS Chat](https://docs.aws.amazon.com/ivs/latest/userguide/getting-started-chat.html) for a detailed guide.
