@@ -22,10 +22,14 @@ To open the demo Android app, follow these instructions:
         * A sample playback url for a 24/7 livestream is pre-filled. You may add a playback url to use a custom livestream in this demo.
     * Amazon IVS Chat Demo backend endpoint `API_URL`
         * You must deploy the [Amazon IVS Chat Demo Backend](https://github.com/aws-samples/amazon-ivs-chat-web-demo/tree/main/serverless) to get this value.
+        * The Api URL must end with a trailing slash "/". For example, "https://1234567890.execute-api.REGION.amazonaws.com/Prod/".
     * Chat room id `CHAT_ROOM_ID`
-        * The ID (or ARN) of the Amazon IVS Chat Room that the app should use.
-        * You must create an Amazon IVS Chat Room to get a chat room ID/ARN. Refer to [Getting Started with Amazon IVS Chat](https://docs.aws.amazon.com/ivs/latest/userguide/getting-started-chat.html) for a detailed guide.
-3. Build and install the `.apk` on your device / emulator
+       * The ID (or ARN) of the Amazon IVS Chat Room that the app should use.
+       * You must create an Amazon IVS Chat Room to get a chat room ID/ARN. Refer to [Getting Started with Amazon IVS Chat](https://docs.aws.amazon.com/ivs/latest/userguide/getting-started-chat.html) for a detailed guide.
+3. Open the constants file at `app/java/com/amazon/ivs/chatdemo/common/Constants.kt` and set constants for:
+   * The AWS region of your chat room `REGION_URL`
+      * This is set to `us-west-2` by default.
+4. Build and install the `.apk` on your device / emulator
 
 ## Known issues and limitations
 * The application is meant for demonstration purposes and **not** for production use.
