@@ -1,6 +1,7 @@
 package com.amazon.ivs.chatdemo.ui
 
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.amazon.ivs.chatdemo.App
 import com.amazon.ivs.chatdemo.R
@@ -63,16 +64,13 @@ class SettingsActivity : AppCompatActivity() {
                 binding.customUrl = url
             }
         }
-    }
 
-    override fun onSupportNavigateUp(): Boolean {
-        onBackPressed()
-        return true
-    }
-
-    override fun onBackPressed() {
-        super.onBackPressed()
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+                finish()
+            }
+        })
     }
 
     private fun showPopup(shouldRevert: Boolean) {

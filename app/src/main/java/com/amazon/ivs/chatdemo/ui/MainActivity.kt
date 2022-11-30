@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.doOnLayout
@@ -311,14 +312,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
         viewModel.collectAvatarAndStickers()
-    }
 
-    override fun onBackPressed() {
-        when {
-            viewModel.isShowingStickers -> viewModel.isShowingStickers = false
-            binding.moderatorView.visibility == View.VISIBLE -> binding.moderatorView.animateVisibility(false)
-            else -> super.onBackPressed()
-        }
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when {
+                    viewModel.isShowingStickers -> viewModel.isShowingStickers = false
+                    binding.moderatorView.visibility == View.VISIBLE -> binding.moderatorView.animateVisibility(false)
+                    else -> finish()
+                }
+            }
+        })
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
