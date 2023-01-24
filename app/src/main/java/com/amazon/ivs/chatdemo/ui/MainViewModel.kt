@@ -7,38 +7,35 @@ import android.view.Surface
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.amazon.ivs.chatdemo.R
 import com.amazon.ivs.chatdemo.common.AVATARS
 import com.amazon.ivs.chatdemo.common.MAX_QUALITY
 import com.amazon.ivs.chatdemo.common.STICKERS
-import com.amazon.ivs.chatdemo.common.extensions.ConsumableSharedFlow
-import com.amazon.ivs.chatdemo.common.extensions.init
-import com.amazon.ivs.chatdemo.common.extensions.launch
+import com.amazon.ivs.chatdemo.common.extensions.*
 import com.amazon.ivs.chatdemo.repository.ChatRepository
 import com.amazon.ivs.chatdemo.repository.cache.PreferenceProvider
 import com.amazon.ivs.chatdemo.repository.models.*
 import com.amazonaws.ivs.player.MediaPlayer
 import com.amazonaws.ivs.player.Player
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import timber.log.Timber
 import kotlin.properties.Delegates
 
 class MainViewModel(
-    private var preferenceProvider: PreferenceProvider,
-    private var repository: ChatRepository
+    private val preferenceProvider: PreferenceProvider,
+    private val repository: ChatRepository
 ) : ViewModel(), DefaultLifecycleObserver {
-
     private var _isModerator = false
     private var listener: Player.Listener? = null
     private var player: MediaPlayer? = null
     private var didCurrentUserDeleteMessage = false
     private var didCurrentUserKickRemote = false
+    private var rows = mutableListOf<Int>()
     private val rawAvatars = AVATARS
     private val rawStickers = STICKERS
+    private val availableRows = mutableListOf<Int>()
 
-    private val _messages = ConsumableSharedFlow<List<ChatMessageResponse>>()
     private val _stickers = ConsumableSharedFlow<List<Sticker>>()
     private val _avatars = ConsumableSharedFlow<List<Avatar>>()
     private val _onShowStickers = ConsumableSharedFlow<Boolean>()
@@ -51,8 +48,23 @@ class MainViewModel(
     private val _onKicked = ConsumableSharedFlow<Unit>()
     private val _showSuccessPopup = ConsumableSharedFlow<Int>()
     private val _showChat = MutableStateFlow(false)
+    private val _useBulletChatMode = MutableStateFlow(preferenceProvider.useBulletChat)
 
-    val messages = _messages.asSharedFlow()
+    val messages = repository.messages
+        .onEach {
+            if (didCurrentUserDeleteMessage) {
+                _showSuccessPopup.tryEmit(R.string.message_deleted)
+                didCurrentUserDeleteMessage = false
+            }
+        }
+        .asStateFlow(viewModelScope, emptyList())
+    val onMessage = repository.onMessage
+        .map { message -> setRowForBulletChatMessage(message) }
+        .filterNotNull()
+        .asSharedFlow(viewModelScope)
+    val useBulletChatMode = _useBulletChatMode
+        .onEach { preferenceProvider.useBulletChat = it }
+        .asStateFlow(viewModelScope, preferenceProvider.useBulletChat)
     val avatars = _avatars.asSharedFlow()
     val stickers = _stickers.asSharedFlow()
     val onReadyToChat = _onReadyToChat.asSharedFlow()
@@ -115,15 +127,6 @@ class MainViewModel(
                 }
             }
         }
-        launch {
-            repository.messages.collect {
-                _messages.tryEmit(it)
-                if (didCurrentUserDeleteMessage) {
-                    _showSuccessPopup.tryEmit(R.string.message_deleted)
-                    didCurrentUserDeleteMessage = false
-                }
-            }
-        }
     }
 
     fun collectAvatarAndStickers() {
@@ -131,14 +134,21 @@ class MainViewModel(
         _stickers.tryEmit(rawStickers.map { it.copy() })
     }
 
+    fun initRows(rowCount: Int) {
+        rows = (0 until rowCount).toMutableList()
+        availableRows.addAll(rows)
+    }
+
     fun initPlayer(context: Context, surface: Surface) {
         if (player != null) return
+
         _onBuffering.tryEmit(true)
         player = MediaPlayer(context)
         listener = player!!.init(
-            { videoSizeState ->
+            onVideoSizeChanged = { videoSizeState ->
                 _onSizeChanged.tryEmit(videoSizeState)
-            }, { state ->
+            },
+            onStateChanged = { state ->
                 when (state) {
                     Player.State.BUFFERING -> _onBuffering.tryEmit(true)
                     Player.State.READY -> {
@@ -149,7 +159,8 @@ class MainViewModel(
                     Player.State.PLAYING -> _onBuffering.tryEmit(false)
                     else -> { /* Ignored */ }
                 }
-            }, { exception ->
+            },
+            onError = { exception ->
                 _onPlayerError.tryEmit(exception)
             }
         )
@@ -161,7 +172,10 @@ class MainViewModel(
     }
 
     fun refreshToken() =
-        repository.refreshToken(displayName, if (avatarIndex == -1) AVATARS.first().url else AVATARS[avatarIndex].url)
+        repository.refreshToken(
+            displayName,
+            if (avatarIndex == -1) AVATARS.first().url else AVATARS[avatarIndex].url
+        )
 
     fun release() {
         listener?.run {
@@ -172,7 +186,6 @@ class MainViewModel(
         player = null
         listener = null
         repository.clearAllLocalMessages()
-        _messages.tryEmit(emptyList())
     }
 
     fun sendMessage(message: String) {
@@ -207,9 +220,30 @@ class MainViewModel(
         repository.updatePermissions(grantPermissions)
     }
 
+    fun setUseChatBulletMode(shouldUseChatBulletMode: Boolean) {
+        _useBulletChatMode.update { shouldUseChatBulletMode }
+    }
+
+    private fun setRowForBulletChatMessage(message: ChatMessageResponse): Pair<Int, ChatMessageResponse>? {
+        if (!useBulletChatMode.value || availableRows.isEmpty()) return null
+
+        val row = availableRows.random()
+        availableRows.remove(row)
+
+        if (availableRows.isEmpty()) {
+            availableRows.addAll(rows)
+            availableRows.remove(row)
+        }
+
+        return row to message
+    }
+
     override fun onResume(owner: LifecycleOwner) {
         // Currently just trying to connect to room after onPause does not work.
         // Info taken from ChatSDK documentation.
-        repository.onResume(displayName, if (avatarIndex == -1) AVATARS.first().url else AVATARS[avatarIndex].url)
+        repository.onResume(
+            displayName,
+            if (avatarIndex == -1) AVATARS.first().url else AVATARS[avatarIndex].url
+        )
     }
 }

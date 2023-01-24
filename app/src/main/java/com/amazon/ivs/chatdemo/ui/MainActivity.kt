@@ -19,8 +19,10 @@ import androidx.core.widget.doOnTextChanged
 import com.amazon.ivs.chatdemo.App
 import com.amazon.ivs.chatdemo.R
 import com.amazon.ivs.chatdemo.common.*
+import com.amazon.ivs.chatdemo.ui.chat.BulletChatRowView
 import com.amazon.ivs.chatdemo.common.extensions.*
 import com.amazon.ivs.chatdemo.databinding.ActivityMainBinding
+import com.amazon.ivs.chatdemo.databinding.RowBulletChatBinding
 import com.amazon.ivs.chatdemo.databinding.ViewIntroductionPopupBinding
 import com.amazon.ivs.chatdemo.repository.ChatRepository
 import com.amazon.ivs.chatdemo.repository.cache.PreferenceProvider
@@ -31,11 +33,11 @@ import com.amazon.ivs.chatdemo.ui.adapters.ChatAdapter
 import com.amazon.ivs.chatdemo.ui.adapters.StickerAdapter
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import timber.log.Timber
 import javax.inject.Inject
 
 class MainActivity : AppCompatActivity() {
-
     @Inject lateinit var preferenceProvider: PreferenceProvider
     @Inject lateinit var repository: ChatRepository
 
@@ -69,6 +71,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
     }
+    private val bulletRows = mutableListOf<BulletChatRowView>()
 
     private val avatarAdapter by lazy {
         AvatarAdapter { avatar ->
@@ -202,6 +205,16 @@ class MainActivity : AppCompatActivity() {
         }
 
         launchUI {
+            viewModel.useBulletChatMode.collectLatest { useBulletChatMode ->
+                if (useBulletChatMode) {
+                    showBulletChat()
+                } else {
+                    showRegularChat()
+                }
+            }
+        }
+
+        launchUI {
             viewModel.onPlayerError.collect { error ->
                 binding.root.showSnackBar(error.errorMessage)
             }
@@ -258,7 +271,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         launchUI {
-            viewModel.messages.collect { messages ->
+            viewModel.messages.collectLatest { messages ->
                 messagesList = messages
                 chatAdapter.messages = messages
                 if (messages.isNotEmpty()) {
@@ -267,6 +280,12 @@ class MainActivity : AppCompatActivity() {
                         binding.chatList.smoothScrollToPosition(messages.size - 1)
                     }
                 }
+            }
+        }
+
+        launchUI {
+            viewModel.onMessage.collect { message ->
+                bulletRows[message.first].sendMessage(message.second)
             }
         }
 
@@ -326,6 +345,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        AppConfig.onConfigChanged(this)
         remeasureSurface()
     }
 
@@ -363,9 +383,40 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showRegularChat() {
+        binding.chatList.setVisible(true)
+        // We are making the view invisible not gone so when switching to bullet chat during the app,
+        // we get it's measured height correctly
+        binding.bulletChatList.setVisible(false, View.INVISIBLE)
+    }
+
+    private fun showBulletChat() {
+        binding.chatList.setVisible(false)
+        binding.bulletChatList.setVisible(true)
+
+        if (bulletRows.isNotEmpty()) return
+        setupInitialBulletChat()
+    }
+
+    private fun setupInitialBulletChat() {
+        binding.bulletChatList.post {
+            val rowCount = binding.bulletChatList.measuredHeight / resources.getDimension(R.dimen.bullet_chat_max_row_height).toInt()
+            repeat(rowCount) {
+                val bulletRowView = RowBulletChatBinding.inflate(
+                    layoutInflater,
+                    binding.bulletChatList,
+                    true
+                )
+                bulletRows.add(bulletRowView.bulletChatView)
+            }
+
+            viewModel.initRows(rowCount)
+        }
+    }
+
     private fun fitSurface(size: Size) {
         binding.surfaceView.onReady {
-            binding.surfaceView.zoomToFit(size)
+            binding.surfaceView.zoomToFit(size, window.decorView)
         }
     }
 

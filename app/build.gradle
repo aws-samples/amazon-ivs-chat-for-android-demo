@@ -3,6 +3,7 @@ plugins {
     id 'kotlin-android'
     id 'kotlin-kapt'
     id 'kotlinx-serialization'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
@@ -15,8 +16,8 @@ android {
         versionCode 1
         versionName "1.0"
         buildConfigField "String", "STREAM_URL", "\"https://760b256a3da8.us-east-1.playback.live-video.net/api/video/v1/us-east-1.049054135175.channel.6tM2Z9kY16nH.m3u8\""
-        buildConfigField 'String', 'API_URL', "\"https://ENTER_YOUR_API_URL_HERE\""
-        buildConfigField 'String', 'CHAT_ROOM_ID', "\"\""
+        buildConfigField 'String', 'API_URL', "\"https://s4dzmyuqzc.execute-api.us-west-2.amazonaws.com/Prod/\""
+        buildConfigField 'String', 'CHAT_ROOM_ID', "\"arn:aws:ivschat:us-west-2:298083573632:room/uChBCPD6XkSJ\""
     }
     buildFeatures {
         viewBinding true
@@ -44,7 +45,7 @@ android {
 dependencies {
     // Android
     api 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'androidx.appcompat:appcompat:1.6.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'com.google.android.material:material:1.7.0'
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1"
@@ -54,10 +55,11 @@ dependencies {
 
     // Amazon
     implementation 'com.amazonaws:ivs-chat-messaging:1.0.0'
-    implementation 'com.amazonaws:ivs-player:1.14.0'
+    implementation 'com.amazonaws:ivs-player:1.16.0'
 
     // Timber
     implementation 'com.jakewharton.timber:timber:5.0.1'
+    implementation 'androidx.core:core-ktx:1.9.0'
 
     // Dagger
     kapt 'com.google.dagger:dagger-compiler:2.44.2'

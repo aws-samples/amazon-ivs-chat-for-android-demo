@@ -14,4 +14,7 @@
     <dimen name="settings_start_padding">72dp</dimen>
 
     <dimen name="main_button_height">48dp</dimen>
+    <dimen name="text_normal">16sp</dimen>
+    <dimen name="sticker_size">96dp</dimen>
+    <dimen name="bullet_chat_max_row_height">96dp</dimen>
 </resources>

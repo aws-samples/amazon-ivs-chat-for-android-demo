@@ -1,8 +1,8 @@
 package com.amazon.ivs.chatdemo.injection
 
 import com.amazon.ivs.chatdemo.App
-import com.amazon.ivs.chatdemo.common.chat.ChatManager
-import com.amazon.ivs.chatdemo.common.chat.ChatManagerImpl
+import com.amazon.ivs.chatdemo.repository.ChatManager
+import com.amazon.ivs.chatdemo.repository.ChatManagerImpl
 import com.amazon.ivs.chatdemo.repository.ChatRepository
 import com.amazon.ivs.chatdemo.repository.cache.PreferenceProvider
 import com.amazon.ivs.chatdemo.repository.networking.NetworkClient

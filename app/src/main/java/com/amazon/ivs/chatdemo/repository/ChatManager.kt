@@ -1,4 +1,4 @@
-package com.amazon.ivs.chatdemo.common.chat
+package com.amazon.ivs.chatdemo.repository
 
 import com.amazon.ivs.chatdemo.common.REGION_URL
 import com.amazon.ivs.chatdemo.common.extensions.ConsumableSharedFlow

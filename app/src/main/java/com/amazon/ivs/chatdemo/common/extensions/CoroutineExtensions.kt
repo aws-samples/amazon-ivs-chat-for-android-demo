@@ -6,7 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.*
 import timber.log.Timber
 
 private val ioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -30,3 +30,18 @@ fun ViewModel.launch(block: suspend CoroutineScope.() -> Unit) = viewModelScope.
     },
     block = block,
 )
+
+fun <T> MutableStateFlow<List<T>>.updateList(block: MutableList<T>.() -> Unit) = update {
+    it.toMutableList().apply(block = block)
+}
+
+fun <T> Flow<T>.asStateFlow(
+    coroutineScope: CoroutineScope,
+    initialValue: T,
+    started: SharingStarted = SharingStarted.WhileSubscribed(5000)
+) = stateIn(coroutineScope, started, initialValue)
+
+fun <T> Flow<T>.asSharedFlow(
+    coroutineScope: CoroutineScope,
+    started: SharingStarted = SharingStarted.WhileSubscribed(5000)
+) = shareIn(coroutineScope, started)

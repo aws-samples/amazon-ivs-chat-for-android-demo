@@ -1,10 +1,12 @@
 package com.amazon.ivs.chatdemo.ui
 
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import com.amazon.ivs.chatdemo.App
 import com.amazon.ivs.chatdemo.R
+import com.amazon.ivs.chatdemo.common.AppConfig
 import com.amazon.ivs.chatdemo.common.extensions.launchUI
 import com.amazon.ivs.chatdemo.common.extensions.lazyViewModel
 import com.amazon.ivs.chatdemo.common.extensions.showInputDialog
@@ -27,6 +29,13 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+                finish()
+            }
+        })
+
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayShowHomeEnabled(true)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -34,6 +43,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.useCustomUrl = viewModel.useCustomUrl
         binding.customUrl = viewModel.customUrl
         binding.isLoggedIn = viewModel.isLoggedIn
+        binding.useBulletChatMode = viewModel.useBulletChatMode.value
 
         binding.customStreamSwitch.setOnCheckedChangeListener { _, isChecked ->
             if (viewModel.useCustomUrl == isChecked) return@setOnCheckedChangeListener
@@ -41,6 +51,11 @@ class SettingsActivity : AppCompatActivity() {
             if (isChecked) {
                 showPopup(true)
             }
+        }
+
+        binding.bulletChatSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (viewModel.useBulletChatMode.value == isChecked) return@setOnCheckedChangeListener
+            viewModel.setUseChatBulletMode(isChecked)
         }
 
         binding.playbackUrlButton.setOnClickListener {
@@ -51,7 +66,7 @@ class SettingsActivity : AppCompatActivity() {
         binding.logOutButton.setOnClickListener {
             viewModel.avatarIndex = -1
             viewModel.displayName = ""
-            onBackPressed()
+            onBackPressedDispatcher.onBackPressed()
         }
 
         launchUI {
@@ -64,22 +79,27 @@ class SettingsActivity : AppCompatActivity() {
                 binding.customUrl = url
             }
         }
+    }
 
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-                finish()
-            }
-        })
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        AppConfig.onConfigChanged(this)
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        onBackPressedDispatcher.onBackPressed()
+        return super.onSupportNavigateUp()
     }
 
     private fun showPopup(shouldRevert: Boolean) {
-        showInputDialog(viewModel.customUrl, onSave = { url ->
-            viewModel.customUrl = url
-        }, onCancel = {
-            if (shouldRevert) {
-                viewModel.useCustomUrl = false
-            }
-        })
+        showInputDialog(viewModel.customUrl,
+            onSave = { url ->
+                viewModel.customUrl = url
+            },
+            onCancel = {
+                if (shouldRevert) {
+                    viewModel.useCustomUrl = false
+                }
+            })
     }
 }

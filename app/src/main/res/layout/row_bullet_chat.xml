@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.amazon.ivs.chatdemo.ui.chat.BulletChatRowView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/bullet_chat_view"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/bullet_chat_max_row_height"
+    app:messageTextSize="@dimen/text_normal"
+    app:stickerSize="@dimen/sticker_size"/>

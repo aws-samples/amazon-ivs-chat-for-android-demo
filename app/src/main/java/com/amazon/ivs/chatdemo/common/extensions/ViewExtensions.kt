@@ -94,8 +94,8 @@ fun TextureView.onReady(onReady: (surface: Surface) -> Unit) {
     }
 }
 
-fun View.zoomToFit(videoSize: Size) {
-    (parent as View).doOnLayout { useToScale ->
+fun View.zoomToFit(videoSize: Size, decorView: View) {
+    decorView.doOnLayout { useToScale ->
         val cardWidth = useToScale.measuredWidth
         val cardHeight = useToScale.measuredHeight
         val size = calculateSurfaceSize(cardWidth, cardHeight, videoSize)

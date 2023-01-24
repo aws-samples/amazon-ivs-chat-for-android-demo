@@ -1,5 +1,7 @@
 package com.amazon.ivs.chatdemo.common.extensions
 
+import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
 import android.view.animation.BounceInterpolator
 import android.widget.ImageView
@@ -8,12 +10,17 @@ import com.amazon.ivs.chatdemo.common.ANIMATION_DURATION_LONG
 import com.amazon.ivs.chatdemo.common.ANIMATION_START_OFFSET
 import com.amazon.ivs.chatdemo.common.ITEM_SCALE_BIG
 import com.amazon.ivs.chatdemo.common.ITEM_SCALE_SMALL
+import com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.target.Target
+import com.bumptech.glide.request.transition.Transition
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 object BindingAdapters {
     @BindingAdapter("loadImage")
@@ -62,4 +69,20 @@ object BindingAdapters {
 
 fun ImageView.loadImage(url: String) {
     BindingAdapters.setImage(this, url)
+}
+
+fun ChatMessageResponse.loadSticker(context: Context, dpStickerSize: Int, onLoaded: (Bitmap) -> Unit) {
+    Glide.with(context)
+        .asBitmap()
+        .load(imageResource)
+        .apply(RequestOptions().override((dpStickerSize * ITEM_SCALE_BIG).roundToInt()))
+        .into(object : CustomTarget<Bitmap>() {
+            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                onLoaded(resource)
+            }
+
+            override fun onLoadCleared(placeholder: Drawable?) {
+                /* Ignored */
+            }
+        })
 }

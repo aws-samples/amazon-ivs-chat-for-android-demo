@@ -5,10 +5,10 @@ import android.os.Looper
 import com.amazon.ivs.chatdemo.common.MESSAGE_EXPIRATION_RETRY_TIME
 import com.amazon.ivs.chatdemo.common.MESSAGE_HISTORY
 import com.amazon.ivs.chatdemo.common.TOKEN_REFRESH_DELAY
-import com.amazon.ivs.chatdemo.common.chat.ChatManager
 import com.amazon.ivs.chatdemo.common.extensions.ConsumableSharedFlow
 import com.amazon.ivs.chatdemo.common.extensions.launchIO
 import com.amazon.ivs.chatdemo.common.extensions.onRepeat
+import com.amazon.ivs.chatdemo.common.extensions.updateList
 import com.amazon.ivs.chatdemo.repository.models.ChatMessageRequest
 import com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse
 import com.amazon.ivs.chatdemo.repository.models.MessageViewType
@@ -18,7 +18,10 @@ import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationAttrib
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationBody
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationResponse
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import timber.log.Timber
 import java.util.*
 
@@ -26,13 +29,12 @@ class ChatRepository(
     private val chatManager: ChatManager,
     private val networkClient: NetworkClient
 ) {
-
-    private var authBody:  AuthenticationResponse? = null
+    private var authBody: AuthenticationResponse? = null
     private val uuid = UUID.randomUUID().toString()
     private val rawMessages = mutableListOf<ChatMessageResponse>()
     private val timeoutHandler = Handler(Looper.getMainLooper())
     private val timeoutRunnable = Runnable { expireMessages() }
-    private val _messages = ConsumableSharedFlow<List<ChatMessageResponse>>()
+    private val _messages = MutableStateFlow(emptyList<ChatMessageResponse>())
     private val _onLocalKicked = ConsumableSharedFlow<Unit>()
     private val _onRemoteKicked = ConsumableSharedFlow<Unit>()
 
@@ -41,17 +43,23 @@ class ChatRepository(
     private var userName: String = ""
     val onLocalKicked = _onLocalKicked.asSharedFlow()
     val onRemoteKicked = _onRemoteKicked.asSharedFlow()
-    val messages = _messages.asSharedFlow()
+    val messages = _messages.asStateFlow()
+    val onMessage = chatManager.onMessage
 
     init {
         launchIO {
             chatManager.onError.collect { error ->
-                rawMessages.add(ChatMessageResponse().apply {
-                    setNewViewType(MessageViewType.RED)
-                    sender = Sender("", if (error.rawCode == -1) "" else error.rawCode.toString(), "")
-                    content = error.rawError.toString()
-                })
-                _messages.tryEmit(rawMessages.map { it.copy() })
+                _messages.updateList {
+                    add(ChatMessageResponse().apply {
+                        setNewViewType(MessageViewType.RED)
+                        sender = Sender(
+                            "",
+                            if (error.rawCode == -1) "" else error.rawCode.toString(),
+                            ""
+                        )
+                        content = error.rawError.toString()
+                    })
+                }
             }
         }
         launchIO {
@@ -71,27 +79,27 @@ class ChatRepository(
         launchIO {
             chatManager.onRoomConnected.collect {
                 if (userName.isNotBlank()) {
-                    rawMessages.add(ChatMessageResponse().apply { setNewViewType(MessageViewType.GREEN) })
-                    _messages.tryEmit(rawMessages.map { it.copy() })
+                    _messages.updateList {
+                        add(ChatMessageResponse().apply { setNewViewType(MessageViewType.GREEN) })
+                    }
                 }
             }
         }
         launchIO {
             chatManager.onMessageDeleted.collect { messageId ->
-                rawMessages.firstOrNull { it.id == messageId }?.let { message ->
-                    rawMessages.remove(message)
-                    _messages.tryEmit(rawMessages.map { it.copy() })
-                }
+                _messages.updateList { firstOrNull { it.id == messageId }?.let { remove(it) } }
             }
         }
         launchIO {
             chatManager.onMessage.collect { message ->
-                if (rawMessages.contains(message)) return@collect
-                if (rawMessages.size == MESSAGE_HISTORY) {
-                    rawMessages.removeFirst()
+                if (_messages.value.contains(message)) return@collect
+                if (_messages.value.size == MESSAGE_HISTORY) {
+                    _messages.update { it.drop(1) }
                 }
-                rawMessages.add(message)
-                _messages.tryEmit(rawMessages.map { it.copy() })
+                _messages.update {
+                    Timber.d("Updating messages with $message")
+                    it + message
+                }
             }
         }
         timeoutHandler.postDelayed(timeoutRunnable, MESSAGE_EXPIRATION_RETRY_TIME)
@@ -134,8 +142,7 @@ class ChatRepository(
     }
 
     fun clearAllLocalMessages() {
-        rawMessages.clear()
-        _messages.tryEmit(rawMessages.map { it.copy() })
+        _messages.update { emptyList() }
     }
 
     fun updatePermissions(isGranted: Boolean) {
@@ -154,6 +161,7 @@ class ChatRepository(
             val body = AuthenticationBody(userId = uuid, attributes = attributes)
             body.addModeratorPermissions(isModeratorGranted)
             authBody = networkClient.api.authenticate(body)
+            Timber.d("Reached here")
             chatManager.initRoom(authBody!!, uuid)
             chatManager.connect()
         } catch (e: Exception) {
@@ -163,14 +171,11 @@ class ChatRepository(
 
     private fun expireMessages() {
         timeoutHandler.removeCallbacks(timeoutRunnable)
-        if (rawMessages.removeAll { it.isExpired }) {
-            _messages.tryEmit(rawMessages.map { it.copy() })
-        }
+        _messages.updateList { removeAll { it.isExpired } }
         timeoutHandler.postDelayed(timeoutRunnable, MESSAGE_EXPIRATION_RETRY_TIME)
     }
 
     private fun removeUserLocalMessages(messagesToRemove: List<ChatMessageResponse>) {
-        rawMessages.removeAll(messagesToRemove)
-        _messages.tryEmit(rawMessages.map { it.copy() })
+        _messages.updateList { removeAll(messagesToRemove) }
     }
 }
