@@ -9,7 +9,7 @@
 
         <variable
             name="item"
-            type="com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse" />
+            type="com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse" />
     </data>
 
     <LinearLayout
@@ -29,7 +29,7 @@
             android:gravity="center"
             android:text= "@{@string/error_template(item.sender.username)}"
             android:textColor="@color/white"
-            android:textSize="15sp"
+            android:textSize="@dimen/text_normal"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/chat_icon"
@@ -47,7 +47,7 @@
             android:gravity="center"
             android:text="@{item.content}"
             android:textColor="@color/white"
-            android:textSize="15sp"
+            android:textSize="@dimen/text_normal"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/chat_sender"

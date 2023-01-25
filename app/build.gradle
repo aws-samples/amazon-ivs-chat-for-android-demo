@@ -3,6 +3,7 @@ plugins {
     id 'kotlin-android'
     id 'kotlin-kapt'
     id 'kotlinx-serialization'
+    id 'dagger.hilt.android.plugin'
 }
 
 android {
@@ -34,9 +35,6 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
-        freeCompilerArgs += [
-                "-Xuse-experimental=kotlinx.serialization.ExperimentalSerializationApi", '-Xjvm-default=enable'
-        ]
     }
     namespace 'com.amazon.ivs.chatdemo'
 }
@@ -44,25 +42,25 @@ android {
 dependencies {
     // Android
     api 'androidx.core:core-ktx:1.9.0'
-    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'androidx.appcompat:appcompat:1.6.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'com.google.android.material:material:1.8.0'
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1"
+    implementation "androidx.navigation:navigation-fragment-ktx:2.5.3"
 
     // Serialization
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1'
 
     // Amazon
     implementation 'com.amazonaws:ivs-chat-messaging:1.0.0'
-    implementation 'com.amazonaws:ivs-player:1.14.0'
+    implementation 'com.amazonaws:ivs-player:1.16.0'
 
     // Timber
     implementation 'com.jakewharton.timber:timber:5.0.1'
 
-    // Dagger
-    kapt 'com.google.dagger:dagger-compiler:2.44.2'
-    kapt 'com.google.dagger:dagger-android-processor:2.44.2'
-    implementation 'com.google.dagger:dagger-android-support:2.44.2'
+    // Hilt
+    implementation 'com.google.dagger:hilt-android:2.44.2'
+    kapt 'com.google.dagger:hilt-android-compiler:2.44.2'
 
     // Glide
     implementation 'com.github.bumptech.glide:glide:4.14.2'

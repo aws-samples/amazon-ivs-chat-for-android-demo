@@ -6,23 +6,25 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.databinding.ViewDataBinding
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.amazon.ivs.chatdemo.databinding.RowChatGreenPillBinding
 import com.amazon.ivs.chatdemo.databinding.RowChatMessageItemBinding
 import com.amazon.ivs.chatdemo.databinding.RowChatRedPillBinding
 import com.amazon.ivs.chatdemo.databinding.RowChatStickerItemBinding
-import com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse
-import com.amazon.ivs.chatdemo.repository.models.MessageViewType
-import kotlin.properties.Delegates
+import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse
+import com.amazon.ivs.chatdemo.repository.networking.models.MessageViewType
+
+private val chatDiff = object : DiffUtil.ItemCallback<ChatMessageResponse>() {
+    override fun areItemsTheSame(oldItem: ChatMessageResponse, newItem: ChatMessageResponse) = oldItem.timeStamp == newItem.timeStamp
+    override fun areContentsTheSame(oldItem: ChatMessageResponse, newItem: ChatMessageResponse) = oldItem == newItem
+}
 
 class ChatAdapter(
     private val onItemHold: (Int) -> Unit,
     private val onItemTouched: () -> Unit
-) : RecyclerView.Adapter<ChatAdapter.ViewHolder>() {
-
-    var messages: List<ChatMessageResponse> by Delegates.observable(emptyList()) { _, old, new ->
-        DiffUtil.calculateDiff(MembersDiff(old, new)).dispatchUpdatesTo(this)
-    }
+) : ListAdapter<ChatMessageResponse, ChatAdapter.ViewHolder>(chatDiff) {
+    inner class ViewHolder(val binding: ViewDataBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = when (viewType) {
@@ -52,13 +54,9 @@ class ChatAdapter(
         return ViewHolder(binding)
     }
 
-    override fun getItemCount(): Int = messages.size
-
-    override fun getItemViewType(position: Int) = messages[position].viewType.index
-
     @SuppressLint("ClickableViewAccessibility")
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val message = messages[position]
+        val message = currentList[position]
         when (message.viewType) {
             MessageViewType.MESSAGE -> {
                 (holder.binding as RowChatMessageItemBinding).item = message
@@ -79,30 +77,12 @@ class ChatAdapter(
         }
     }
 
-    private fun View.setListener(viewHolder: ViewHolder) {
+    override fun getItemViewType(position: Int) = currentList[position].viewType.index
+
+    private fun View.setListener(viewHolder: ChatAdapter.ViewHolder) {
         setOnLongClickListener {
             onItemHold(viewHolder.layoutPosition)
             true
-        }
-    }
-
-    inner class ViewHolder(val binding: ViewDataBinding) : RecyclerView.ViewHolder(binding.root)
-
-    inner class MembersDiff(
-        private val oldItems: List<ChatMessageResponse>,
-        private val newItems: List<ChatMessageResponse>
-    ) : DiffUtil.Callback() {
-
-        override fun getOldListSize() = oldItems.size
-
-        override fun getNewListSize() = newItems.size
-
-        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldItems[oldItemPosition].timeStamp == newItems[newItemPosition].timeStamp
-        }
-
-        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldItems[oldItemPosition] == newItems[newItemPosition]
         }
     }
 }

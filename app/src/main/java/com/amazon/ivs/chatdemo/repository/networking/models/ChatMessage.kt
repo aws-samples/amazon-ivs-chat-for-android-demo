@@ -1,4 +1,4 @@
-package com.amazon.ivs.chatdemo.repository.models
+package com.amazon.ivs.chatdemo.repository.networking.models
 
 import com.amazon.ivs.chatdemo.common.MESSAGE_TIMEOUT
 import com.amazon.ivs.chatdemo.common.STICKERS
@@ -20,9 +20,9 @@ data class ChatMessageRequest(
 @Serializable
 data class ChatMessageResponse(
     val type: String = EVENT_MESSAGE,
-    var id: String = "",
+    val id: String = "",
     val requestId: String = "",
-    var attributes: MessageAttributes? = null,
+    val attributes: MessageAttributes? = null,
     var content: String = "",
     var sender: Sender? = null,
     @Transient val timeStamp: Long = Date().time,

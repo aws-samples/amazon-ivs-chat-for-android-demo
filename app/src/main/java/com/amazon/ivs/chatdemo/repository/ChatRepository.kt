@@ -1,100 +1,117 @@
 package com.amazon.ivs.chatdemo.repository
 
-import android.os.Handler
-import android.os.Looper
 import com.amazon.ivs.chatdemo.common.MESSAGE_EXPIRATION_RETRY_TIME
 import com.amazon.ivs.chatdemo.common.MESSAGE_HISTORY
 import com.amazon.ivs.chatdemo.common.TOKEN_REFRESH_DELAY
-import com.amazon.ivs.chatdemo.common.chat.ChatManager
-import com.amazon.ivs.chatdemo.common.extensions.ConsumableSharedFlow
-import com.amazon.ivs.chatdemo.common.extensions.launchIO
+import com.amazon.ivs.chatdemo.repository.managers.ChatManager
 import com.amazon.ivs.chatdemo.common.extensions.onRepeat
-import com.amazon.ivs.chatdemo.repository.models.ChatMessageRequest
-import com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse
-import com.amazon.ivs.chatdemo.repository.models.MessageViewType
-import com.amazon.ivs.chatdemo.repository.models.Sender
-import com.amazon.ivs.chatdemo.repository.networking.NetworkClient
+import com.amazon.ivs.chatdemo.common.extensions.updateList
+import com.amazon.ivs.chatdemo.injection.IOScope
+import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageRequest
+import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse
+import com.amazon.ivs.chatdemo.repository.networking.models.MessageViewType
+import com.amazon.ivs.chatdemo.repository.networking.models.Sender
+import com.amazon.ivs.chatdemo.repository.networking.Endpoints
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationAttributes
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationBody
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationResponse
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import timber.log.Timber
 import java.util.*
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ChatRepository(
+@Singleton
+class ChatRepository @Inject constructor(
     private val chatManager: ChatManager,
-    private val networkClient: NetworkClient
+    private val endpoints: Endpoints,
+    @IOScope private val ioScope: CoroutineScope,
 ) {
-
-    private var authBody:  AuthenticationResponse? = null
+    private var authBody: AuthenticationResponse? = null
     private val uuid = UUID.randomUUID().toString()
-    private val rawMessages = mutableListOf<ChatMessageResponse>()
-    private val timeoutHandler = Handler(Looper.getMainLooper())
-    private val timeoutRunnable = Runnable { expireMessages() }
-    private val _messages = ConsumableSharedFlow<List<ChatMessageResponse>>()
-    private val _onLocalKicked = ConsumableSharedFlow<Unit>()
-    private val _onRemoteKicked = ConsumableSharedFlow<Unit>()
+    private val _messages = MutableStateFlow(emptyList<ChatMessageResponse>())
+    private val _onLocalKicked = Channel<Unit>()
+    private val _onRemoteKicked = Channel<Unit>()
 
     private var isModeratorGranted = false
-
     private var userName: String = ""
-    val onLocalKicked = _onLocalKicked.asSharedFlow()
-    val onRemoteKicked = _onRemoteKicked.asSharedFlow()
-    val messages = _messages.asSharedFlow()
+
+    val onLocalKicked = _onLocalKicked.receiveAsFlow()
+    val onRemoteKicked = _onRemoteKicked.receiveAsFlow()
+    val messages = _messages.asStateFlow()
+    val onMessage = chatManager.onMessage
 
     init {
-        launchIO {
+        ioScope.launch {
             chatManager.onError.collect { error ->
-                rawMessages.add(ChatMessageResponse().apply {
-                    setNewViewType(MessageViewType.RED)
-                    sender = Sender("", if (error.rawCode == -1) "" else error.rawCode.toString(), "")
-                    content = error.rawError.toString()
-                })
-                _messages.tryEmit(rawMessages.map { it.copy() })
+                _messages.updateList {
+                    add(ChatMessageResponse().apply {
+                        setNewViewType(MessageViewType.RED)
+                        sender = Sender(
+                            "",
+                            error.errorCode.toString(),
+                            ""
+                        )
+                        content = error.errorMessage
+                    })
+                }
             }
         }
-        launchIO {
+        ioScope.launch {
             chatManager.onRemoteKicked.collect { userId ->
-                val messagesToRemove = rawMessages.filter { it.sender?.id == userId }
+                val messagesToRemove = _messages.value.filter { it.sender?.id == userId }
                 removeUserLocalMessages(messagesToRemove)
-                _onRemoteKicked.tryEmit(Unit)
+                _onRemoteKicked.trySend(Unit)
             }
         }
-        launchIO {
+        ioScope.launch {
             chatManager.onLocalKicked.collect {
                 userName = ""
                 clearAllLocalMessages()
-                _onLocalKicked.tryEmit(Unit)
+                _onLocalKicked.trySend(Unit)
             }
         }
-        launchIO {
+        ioScope.launch {
             chatManager.onRoomConnected.collect {
                 if (userName.isNotBlank()) {
-                    rawMessages.add(ChatMessageResponse().apply { setNewViewType(MessageViewType.GREEN) })
-                    _messages.tryEmit(rawMessages.map { it.copy() })
+                    _messages.updateList {
+                        add(ChatMessageResponse().apply { setNewViewType(MessageViewType.GREEN) })
+                    }
                 }
             }
         }
-        launchIO {
+        ioScope.launch {
             chatManager.onMessageDeleted.collect { messageId ->
-                rawMessages.firstOrNull { it.id == messageId }?.let { message ->
-                    rawMessages.remove(message)
-                    _messages.tryEmit(rawMessages.map { it.copy() })
-                }
+                _messages.updateList { firstOrNull { it.id == messageId }?.let { remove(it) } }
             }
         }
-        launchIO {
+        ioScope.launch {
             chatManager.onMessage.collect { message ->
-                if (rawMessages.contains(message)) return@collect
-                if (rawMessages.size == MESSAGE_HISTORY) {
-                    rawMessages.removeFirst()
+                if (_messages.value.contains(message)) return@collect
+
+                if (_messages.value.size == MESSAGE_HISTORY) {
+                    _messages.update { it.drop(1) }
                 }
-                rawMessages.add(message)
-                _messages.tryEmit(rawMessages.map { it.copy() })
+                _messages.update {
+                    Timber.d("Updating messages with $message")
+                    it + message
+                }
             }
         }
-        timeoutHandler.postDelayed(timeoutRunnable, MESSAGE_EXPIRATION_RETRY_TIME)
+        ioScope.launch {
+            while (isActive) {
+                delay(MESSAGE_EXPIRATION_RETRY_TIME)
+                expireMessages()
+            }
+        }
     }
 
     fun sendMessage(chatMessage: ChatMessageRequest) {
@@ -106,13 +123,13 @@ class ChatRepository(
         chatManager.deleteMessage(id)
     }
 
-    fun kickUser(userId: String) = launchIO {
+    fun kickUser(userId: String) = ioScope.launch {
         try {
             if (isModeratorGranted) {
                 chatManager.disconnectUser(userId)
-                val messagesToRemove = rawMessages.filter { it.sender?.id == userId }
+                val messagesToRemove = _messages.value.filter { it.sender?.id == userId }
 
-                launchIO {
+                ioScope.launch {
                     messagesToRemove.forEach { chatMessage ->
                         delay(300) // Delay because calling too fast causes socket exception
                         chatManager.deleteMessage(chatMessage.id)
@@ -134,8 +151,7 @@ class ChatRepository(
     }
 
     fun clearAllLocalMessages() {
-        rawMessages.clear()
-        _messages.tryEmit(rawMessages.map { it.copy() })
+        _messages.update { emptyList() }
     }
 
     fun updatePermissions(isGranted: Boolean) {
@@ -143,17 +159,18 @@ class ChatRepository(
         isModeratorGranted = isGranted
     }
 
-    fun onResume(userName: String, avatar: String) {
-        if (authBody == null) getToken(userName, avatar) else chatManager.onResume()
+    fun reconnectToRoom(userName: String, avatar: String) {
+        if (authBody == null) getToken(userName, avatar) else chatManager.connect()
     }
 
-    private fun getToken(userName: String, avatar: String) = launchIO {
+    private fun getToken(userName: String, avatar: String) = ioScope.launch {
         try {
             Timber.d("Requesting token")
             val attributes = AuthenticationAttributes(username = userName, avatar = avatar)
             val body = AuthenticationBody(userId = uuid, attributes = attributes)
             body.addModeratorPermissions(isModeratorGranted)
-            authBody = networkClient.api.authenticate(body)
+            authBody = endpoints.authenticate(body)
+            Timber.d("Reached here")
             chatManager.initRoom(authBody!!, uuid)
             chatManager.connect()
         } catch (e: Exception) {
@@ -162,15 +179,10 @@ class ChatRepository(
     }
 
     private fun expireMessages() {
-        timeoutHandler.removeCallbacks(timeoutRunnable)
-        if (rawMessages.removeAll { it.isExpired }) {
-            _messages.tryEmit(rawMessages.map { it.copy() })
-        }
-        timeoutHandler.postDelayed(timeoutRunnable, MESSAGE_EXPIRATION_RETRY_TIME)
+        _messages.updateList { removeAll { it.isExpired } }
     }
 
     private fun removeUserLocalMessages(messagesToRemove: List<ChatMessageResponse>) {
-        rawMessages.removeAll(messagesToRemove)
-        _messages.tryEmit(rawMessages.map { it.copy() })
+        _messages.updateList { removeAll(messagesToRemove) }
     }
 }

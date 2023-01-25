@@ -2,22 +2,37 @@ package com.amazon.ivs.chatdemo.common.extensions
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
+import android.content.res.Resources
+import android.graphics.Rect
 import android.graphics.SurfaceTexture
 import android.util.Size
 import android.view.Surface
 import android.view.TextureView
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.doOnLayout
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
 import com.amazon.ivs.chatdemo.R
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.snackbar.Snackbar
 
 const val ALPHA_VISIBLE = 1F
 const val ALPHA_GONE = 0F
+
+fun Fragment.hideKeyboard() = (requireActivity() as AppCompatActivity).hideKeyboard()
+
+fun DialogFragment.setWidthPercent(percentage: Int) {
+    val percent = percentage.toFloat() / 100
+    val dm = Resources.getSystem().displayMetrics
+    val rect = dm.run { Rect(0, 0, widthPixels, heightPixels) }
+    val percentWidth = rect.width() * percent
+    dialog?.window?.setLayout(percentWidth.toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+}
 
 fun AppCompatActivity.hideKeyboard() {
     val view = currentFocus ?: window.decorView
@@ -94,8 +109,8 @@ fun TextureView.onReady(onReady: (surface: Surface) -> Unit) {
     }
 }
 
-fun View.zoomToFit(videoSize: Size) {
-    (parent as View).doOnLayout { useToScale ->
+fun View.zoomToFit(videoSize: Size, decorView: View) {
+    decorView.doOnLayout { useToScale ->
         val cardWidth = useToScale.measuredWidth
         val cardHeight = useToScale.measuredHeight
         val size = calculateSurfaceSize(cardWidth, cardHeight, videoSize)

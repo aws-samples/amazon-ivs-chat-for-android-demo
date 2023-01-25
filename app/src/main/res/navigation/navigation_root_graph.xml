@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:startDestination="@id/navigation_chat">
+
+    <fragment
+        android:id="@+id/navigation_chat"
+        android:name="com.amazon.ivs.chatdemo.ui.chat.ChatFragment"
+        tools:layout="@layout/fragment_chat">
+        <action
+            android:id="@+id/to_settings"
+            app:destination="@id/navigation_settings"
+            app:enterAnim="@anim/fade_in"
+            app:exitAnim="@anim/fade_out"
+            app:popEnterAnim="@anim/fade_in"
+            app:popExitAnim="@anim/fade_out" />
+        <action
+            android:id="@+id/open_introduction"
+            app:destination="@id/navigation_introduction" />
+    </fragment>
+    <fragment
+        android:id="@+id/navigation_settings"
+        android:name="com.amazon.ivs.chatdemo.ui.settings.SettingsFragment"
+        tools:layout="@layout/fragment_settings" />
+    <dialog
+        android:id="@+id/navigation_introduction"
+        android:name="com.amazon.ivs.chatdemo.ui.chat.IntroductionDialog"
+        tools:layout="@layout/dialog_introduction" />
+</navigation>

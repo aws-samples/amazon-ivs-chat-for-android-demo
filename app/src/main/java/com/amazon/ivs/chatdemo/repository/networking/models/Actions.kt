@@ -1,4 +1,4 @@
-package com.amazon.ivs.chatdemo.repository.models
+package com.amazon.ivs.chatdemo.repository.networking.models
 
 enum class Actions(val value: String) {
     SEND_MESSAGE("SEND_MESSAGE")

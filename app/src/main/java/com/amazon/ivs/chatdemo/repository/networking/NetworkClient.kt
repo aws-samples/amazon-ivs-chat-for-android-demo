@@ -9,8 +9,7 @@ import java.util.concurrent.TimeUnit
 
 private const val REQUEST_TIMEOUT = 30L
 
-class NetworkClient {
-
+object NetworkClient {
     private val okHttpClient by lazy {
         val builder = OkHttpClient.Builder()
                 .connectTimeout(REQUEST_TIMEOUT, TimeUnit.SECONDS)
