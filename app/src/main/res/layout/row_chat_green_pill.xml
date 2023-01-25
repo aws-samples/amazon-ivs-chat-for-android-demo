@@ -6,7 +6,7 @@
         <import type="android.view.View" />
         <variable
             name="item"
-            type="com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse" />
+            type="com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse" />
     </data>
 
         <FrameLayout
@@ -21,7 +21,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:textSize="15sp"
+                android:textSize="@dimen/text_normal"
                 android:textColor="@color/white"
                 android:textStyle="bold"
                 android:gravity="center"

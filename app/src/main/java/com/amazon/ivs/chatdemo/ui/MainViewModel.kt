@@ -1,178 +1,140 @@
 package com.amazon.ivs.chatdemo.ui
 
 import android.content.Context
-import android.net.Uri
-import android.util.Size
 import android.view.Surface
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.amazon.ivs.chatdemo.R
 import com.amazon.ivs.chatdemo.common.AVATARS
-import com.amazon.ivs.chatdemo.common.MAX_QUALITY
 import com.amazon.ivs.chatdemo.common.STICKERS
-import com.amazon.ivs.chatdemo.common.extensions.ConsumableSharedFlow
-import com.amazon.ivs.chatdemo.common.extensions.init
+import com.amazon.ivs.chatdemo.common.extensions.asSharedFlow
+import com.amazon.ivs.chatdemo.common.extensions.asStateFlow
 import com.amazon.ivs.chatdemo.common.extensions.launch
 import com.amazon.ivs.chatdemo.repository.ChatRepository
 import com.amazon.ivs.chatdemo.repository.cache.PreferenceProvider
-import com.amazon.ivs.chatdemo.repository.models.*
-import com.amazonaws.ivs.player.MediaPlayer
-import com.amazonaws.ivs.player.Player
+import com.amazon.ivs.chatdemo.repository.managers.BulletChatManager
+import com.amazon.ivs.chatdemo.repository.managers.VideoPlayerManager
+import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageRequest
+import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse
+import com.amazon.ivs.chatdemo.repository.networking.models.EVENT_MESSAGE
+import com.amazon.ivs.chatdemo.repository.networking.models.EVENT_STICKER
+import com.amazon.ivs.chatdemo.repository.networking.models.MessageAttributes
+import com.amazon.ivs.chatdemo.repository.models.Sticker
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import timber.log.Timber
-import kotlin.properties.Delegates
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
+import javax.inject.Inject
 
-class MainViewModel(
-    private var preferenceProvider: PreferenceProvider,
-    private var repository: ChatRepository
+@HiltViewModel
+class MainViewModel @Inject constructor(
+    private val preferenceProvider: PreferenceProvider,
+    private val repository: ChatRepository,
+    private val videoPlayerManager: VideoPlayerManager,
+    private val bulletChatManager: BulletChatManager,
 ) : ViewModel(), DefaultLifecycleObserver {
-
-    private var _isModerator = false
-    private var listener: Player.Listener? = null
-    private var player: MediaPlayer? = null
     private var didCurrentUserDeleteMessage = false
     private var didCurrentUserKickRemote = false
-    private val rawAvatars = AVATARS
-    private val rawStickers = STICKERS
 
-    private val _messages = ConsumableSharedFlow<List<ChatMessageResponse>>()
-    private val _stickers = ConsumableSharedFlow<List<Sticker>>()
-    private val _avatars = ConsumableSharedFlow<List<Avatar>>()
-    private val _onShowStickers = ConsumableSharedFlow<Boolean>()
-    private val _onReadyToChat = ConsumableSharedFlow<Boolean>()
-    private val _onBuffering = ConsumableSharedFlow<Boolean>()
-    private val _onPlayerError = ConsumableSharedFlow<PlayerError>()
-    private val _onSizeChanged = ConsumableSharedFlow<Size>()
-    private val _onUseCustomUrl = ConsumableSharedFlow<Boolean>()
-    private val _onUrlChanged = ConsumableSharedFlow<String?>()
-    private val _onKicked = ConsumableSharedFlow<Unit>()
-    private val _showSuccessPopup = ConsumableSharedFlow<Int>()
-    private val _showChat = MutableStateFlow(false)
+    private val _isUsingCustomUrl = MutableStateFlow(preferenceProvider.isUsingCustomUrl)
+    private val _stickers = MutableStateFlow(STICKERS)
+    private val _avatars = MutableStateFlow(AVATARS)
+    private val _isShowingStickers = MutableStateFlow(false)
+    private val _isIntroductionDone = MutableStateFlow(false)
+    private val _displayName = MutableStateFlow("")
+    private val _chosenAvatarIndex = MutableStateFlow<Int?>(null)
+    private val _customUrl = MutableStateFlow(preferenceProvider.customUrl)
+    private val _onKicked = Channel<Unit>()
+    private val _showSuccessPopup = Channel<Int>()
 
-    val messages = _messages.asSharedFlow()
-    val avatars = _avatars.asSharedFlow()
-    val stickers = _stickers.asSharedFlow()
-    val onReadyToChat = _onReadyToChat.asSharedFlow()
-    val onShowStickers = _onShowStickers.asSharedFlow()
-    val onBuffering = _onBuffering.asSharedFlow()
-    val onPlayerError = _onPlayerError.asSharedFlow()
-    val onSizeChanged = _onSizeChanged.asSharedFlow()
-    val onUseCustomUrl = _onUseCustomUrl.asSharedFlow()
-    val onUrlChanged = _onUrlChanged.asSharedFlow()
-    val onKicked = _onKicked.asSharedFlow()
-    val showSuccessPopup = _showSuccessPopup.asSharedFlow()
-    val showChat = _showChat.asStateFlow()
-    val isLoggedIn get() = displayName.isNotBlank() && avatarIndex != -1
-    val isModerator get() = _isModerator
+    var isModerator = false
+        private set
 
-    var isIntroductionDone: Boolean by Delegates.observable(false) { _, _, isDone ->
-        _showChat.tryEmit(isDone && isLoggedIn)
-    }
-    var isShowingStickers: Boolean by Delegates.observable(false) { _, _, isShowing ->
-        _onShowStickers.tryEmit(isShowing)
-    }
-    var displayName: String by Delegates.observable("") { _, _, _ ->
-        _onReadyToChat.tryEmit(isLoggedIn)
-    }
-    var avatarIndex: Int by Delegates.observable(-1) { _, _, index ->
-        _onReadyToChat.tryEmit(isLoggedIn)
-        rawAvatars.forEach { it.isSelected = false }
-        if (index != -1) {
-            rawAvatars[avatarIndex].isSelected = true
+    val isUsingCustomUrl = _isUsingCustomUrl
+        .onEach { useCustomUrl -> preferenceProvider.isUsingCustomUrl = useCustomUrl }
+        .asStateFlow(viewModelScope, preferenceProvider.isUsingCustomUrl)
+
+    val customUrl = _isUsingCustomUrl
+        .combine(_customUrl) { isUsingCustomUrl, customUrl ->
+            if (isUsingCustomUrl) customUrl else null
         }
-        _avatars.tryEmit(rawAvatars.map { it.copy() })
-    }
-    var useCustomUrl: Boolean by Delegates.observable(preferenceProvider.useCustomUrl) { _, _, use ->
-        preferenceProvider.useCustomUrl = use
-        _onUseCustomUrl.tryEmit(use)
-        _onUrlChanged.tryEmit(preferenceProvider.customPlaybackUrl)
-    }
-    var customUrl: String? by Delegates.observable(preferenceProvider.customUrl) { _, _, url ->
-        preferenceProvider.customUrl = url
-        _onUrlChanged.tryEmit(preferenceProvider.customPlaybackUrl)
-        if (url == null) {
-            _onUseCustomUrl.tryEmit(false)
+        .onEach { customUrl -> preferenceProvider.customUrl = customUrl }
+        .asStateFlow(viewModelScope, preferenceProvider.customPlaybackUrl)
+
+    val messages = repository.messages
+        .onEach {
+            if (didCurrentUserDeleteMessage) {
+                _showSuccessPopup.send(R.string.message_deleted)
+                didCurrentUserDeleteMessage = false
+            }
         }
-    }
+        .asStateFlow(viewModelScope, emptyList())
+
+    val avatars = _avatars
+        .combine(_chosenAvatarIndex) { avatars, chosenAvatarIndex ->
+            avatars.mapIndexed { index, avatar ->
+                avatar.copy(isSelected = index == chosenAvatarIndex)
+            }
+        }
+        .asStateFlow(viewModelScope, _avatars.value)
+
+    val isLoggedIn = combine(_displayName, _chosenAvatarIndex) { displayName, chosenAvatarIndex ->
+        displayName.isNotBlank() && chosenAvatarIndex != null
+    }.asStateFlow(viewModelScope, false)
+
+    val isChatShown = combine(_isIntroductionDone, isLoggedIn) { isDone, isLoggedIn ->
+        isDone && isLoggedIn
+    }.asStateFlow(viewModelScope, false)
+
+    val onMessage = repository.onMessage
+        .map { message -> bulletChatManager.setRowForBulletChatMessage(message) }
+        .filterNotNull()
+        .asSharedFlow(viewModelScope)
+
+    val isBuffering = videoPlayerManager.isBuffering
+    val onPlayerError = videoPlayerManager.onPlayerError
+    val playerSize = videoPlayerManager.playerSize
+    val displayName = _displayName.asStateFlow()
+    val stickers = _stickers.asStateFlow()
+    val isShowingStickers = _isShowingStickers.asStateFlow()
+    val onKicked = _onKicked.receiveAsFlow()
+    val showSuccessPopup = _showSuccessPopup.receiveAsFlow()
+    val isIntroductionDone = _isIntroductionDone.asStateFlow()
+    val useBulletChatMode = bulletChatManager.useBulletChatMode
 
     init {
         launch {
             repository.onLocalKicked.collect {
-                displayName = ""
-                avatarIndex = -1
+                _displayName.update { "" }
+                _chosenAvatarIndex.update { null }
                 didCurrentUserKickRemote = false
-                _onKicked.tryEmit(Unit)
+                _onKicked.send(Unit)
             }
         }
         launch {
             repository.onRemoteKicked.collect {
                 if (didCurrentUserKickRemote) {
-                    _showSuccessPopup.tryEmit(R.string.user_kicked)
+                    _showSuccessPopup.send(R.string.user_kicked)
                     didCurrentUserKickRemote = false
                 }
             }
         }
-        launch {
-            repository.messages.collect {
-                _messages.tryEmit(it)
-                if (didCurrentUserDeleteMessage) {
-                    _showSuccessPopup.tryEmit(R.string.message_deleted)
-                    didCurrentUserDeleteMessage = false
-                }
-            }
-        }
-    }
-
-    fun collectAvatarAndStickers() {
-        _avatars.tryEmit(rawAvatars.map { it.copy() })
-        _stickers.tryEmit(rawStickers.map { it.copy() })
     }
 
     fun initPlayer(context: Context, surface: Surface) {
-        if (player != null) return
-        _onBuffering.tryEmit(true)
-        player = MediaPlayer(context)
-        listener = player!!.init(
-            { videoSizeState ->
-                _onSizeChanged.tryEmit(videoSizeState)
-            }, { state ->
-                when (state) {
-                    Player.State.BUFFERING -> _onBuffering.tryEmit(true)
-                    Player.State.READY -> {
-                        player?.qualities?.firstOrNull { it.name == MAX_QUALITY }?.let { quality ->
-                            player?.setAutoMaxQuality(quality)
-                        }
-                    }
-                    Player.State.PLAYING -> _onBuffering.tryEmit(false)
-                    else -> { /* Ignored */ }
-                }
-            }, { exception ->
-                _onPlayerError.tryEmit(exception)
-            }
-        )
-
-        player?.setSurface(surface)
-        player?.load(Uri.parse(preferenceProvider.playbackUrl))
-        player?.play()
-        Timber.d("Player initialized: ${preferenceProvider.playbackUrl}")
+        videoPlayerManager.initPlayer(context, surface)
     }
 
-    fun refreshToken() =
-        repository.refreshToken(displayName, if (avatarIndex == -1) AVATARS.first().url else AVATARS[avatarIndex].url)
-
-    fun release() {
-        listener?.run {
-            Timber.d("Releasing player")
-            player?.removeListener(this)
-        }
-        player?.release()
-        player = null
-        listener = null
-        repository.clearAllLocalMessages()
-        _messages.tryEmit(emptyList())
+    fun initRows(rowCount: Int) {
+        bulletChatManager.initRows(rowCount)
     }
 
     fun sendMessage(message: String) {
@@ -182,7 +144,7 @@ class MainViewModel(
     }
 
     fun deleteMessage(message: ChatMessageResponse) {
-        didCurrentUserDeleteMessage = _isModerator
+        didCurrentUserDeleteMessage = isModerator
         repository.deleteMessage(message.id)
     }
 
@@ -196,20 +158,66 @@ class MainViewModel(
     }
 
     fun kickUser(message: ChatMessageResponse) {
-        didCurrentUserKickRemote = _isModerator
+        didCurrentUserKickRemote = isModerator
         message.sender?.id?.let { senderId ->
             repository.kickUser(senderId)
         }
     }
 
+    fun refreshToken() {
+        val avatarIndex = _chosenAvatarIndex.value
+        val avatar = if (avatarIndex == null) AVATARS.first().url else AVATARS[avatarIndex].url
+        repository.refreshToken(_displayName.value, avatar)
+    }
+
+    fun logout() {
+        _displayName.update { "" }
+        _chosenAvatarIndex.update { null }
+    }
+
     fun updatePermission(grantPermissions: Boolean) {
-        _isModerator = grantPermissions
+        isModerator = grantPermissions
         repository.updatePermissions(grantPermissions)
+    }
+
+    fun setIsIntroductionDone(isIntroductionDone: Boolean) {
+        _isIntroductionDone.update { isIntroductionDone }
+    }
+
+    fun setIsUsingCustomUrl(isUsingCustomUrl: Boolean) {
+        _isUsingCustomUrl.update { isUsingCustomUrl }
+    }
+
+    fun setDisplayName(name: String) {
+        _displayName.update { name }
+    }
+
+    fun setAvatarIndex(avatarIndex: Int) {
+        _chosenAvatarIndex.update { avatarIndex }
+    }
+
+    fun setCustomUrl(customUrl: String?) {
+        _customUrl.update { customUrl }
+    }
+
+    fun setIsShowingStickers(isShowingStickers: Boolean) {
+        _isShowingStickers.update { isShowingStickers }
+    }
+
+    fun setUseChatBulletMode(useChatBulletMode: Boolean) {
+        bulletChatManager.setUseChatBulletMode(useChatBulletMode)
+    }
+
+    fun release() {
+        videoPlayerManager.release()
+        repository.clearAllLocalMessages()
     }
 
     override fun onResume(owner: LifecycleOwner) {
         // Currently just trying to connect to room after onPause does not work.
         // Info taken from ChatSDK documentation.
-        repository.onResume(displayName, if (avatarIndex == -1) AVATARS.first().url else AVATARS[avatarIndex].url)
+        val avatarIndex = _chosenAvatarIndex.value
+        val avatar = if (avatarIndex == null) AVATARS.first().url else AVATARS[avatarIndex].url
+        repository.reconnectToRoom(_displayName.value, avatar)
     }
 }

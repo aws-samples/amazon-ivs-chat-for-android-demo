@@ -7,7 +7,7 @@
         <import type="android.view.View" />
         <variable
             name="item"
-            type="com.amazon.ivs.chatdemo.repository.models.ChatMessageResponse" />
+            type="com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse" />
     </data>
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -34,7 +34,7 @@
                 android:id="@+id/chat_sender"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="15sp"
+                android:textSize="@dimen/text_normal"
                 android:textColor="@color/white"
                 android:textStyle="bold"
                 android:layout_marginStart="@dimen/margin_medium"
@@ -48,7 +48,7 @@
                 android:id="@+id/chat_message"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="15sp"
+                android:textSize="@dimen/text_normal"
                 android:textColor="@color/white"
                 android:layout_marginStart="@dimen/margin_medium"
                 android:layout_marginEnd="@dimen/margin_normal"

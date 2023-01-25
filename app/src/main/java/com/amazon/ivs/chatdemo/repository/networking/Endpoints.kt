@@ -6,7 +6,6 @@ import retrofit2.http.Body
 import retrofit2.http.HTTP
 
 interface Endpoints {
-
     @HTTP(method = "POST", path = "auth", hasBody = true)
     suspend fun authenticate(@Body body: AuthenticationBody): AuthenticationResponse
 }

@@ -1,4 +1,4 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Theme.ChatDemo" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary brand color. -->
@@ -10,7 +10,7 @@
         <item name="colorSecondaryVariant">@color/black_light</item>
         <item name="colorOnSecondary">@color/white</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor" tools:targetApi="l">@color/black</item>
+        <item name="android:statusBarColor" >@color/black</item>
         <!-- Customize your theme here. -->
         <item name="android:windowBackground">@color/black</item>
         <item name="android:navigationBarColor">@color/black</item>
@@ -28,7 +28,7 @@
     </style>
 
     <style name="AlertTitle" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
-        <item name="android:textSize">16sp</item>
+        <item name="android:textSize">@dimen/text_normal</item>
         <item name="android:textColor">@color/white</item>
     </style>
 
@@ -52,7 +52,7 @@
     </style>
 
     <style name="TextStyleButton">
-        <item name="android:textSize">15sp</item>
+        <item name="android:textSize">@dimen/text_normal</item>
     </style>
 
     <style name="Switch" parent="Theme.ChatDemo">

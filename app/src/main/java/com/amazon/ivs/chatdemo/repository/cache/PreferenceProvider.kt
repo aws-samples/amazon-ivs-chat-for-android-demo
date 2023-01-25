@@ -7,16 +7,15 @@ import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
 class PreferenceProvider(context: Context) {
-
     var customUrl by stringPreference()
-    var useCustomUrl by booleanPreference()
-    val customPlaybackUrl get() = customUrl.takeIf { useCustomUrl && !it.isNullOrBlank() }
+    var isUsingCustomUrl by booleanPreference()
+    var useBulletChat by booleanPreference()
+    val customPlaybackUrl get() = customUrl.takeIf { isUsingCustomUrl && !it.isNullOrBlank() }
     val playbackUrl get() = customPlaybackUrl ?: BuildConfig.STREAM_URL
 
     private val sharedPreferences by lazy { context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE) }
 
     private fun stringPreference() = object : ReadWriteProperty<Any?, String?> {
-
         override fun getValue(thisRef: Any?, property: KProperty<*>) = sharedPreferences.getString(property.name, null)
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: String?) {
@@ -25,7 +24,6 @@ class PreferenceProvider(context: Context) {
     }
 
     private fun booleanPreference() = object : ReadWriteProperty<Any?, Boolean> {
-
         override fun getValue(thisRef: Any?, property: KProperty<*>) =
             sharedPreferences.getBoolean(property.name, false)
 
