@@ -52,7 +52,7 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1'
 
     // Amazon
-    implementation 'com.amazonaws:ivs-chat-messaging:1.0.0'
+    implementation 'com.amazonaws:ivs-chat-messaging:1.1.0'
     implementation 'com.amazonaws:ivs-player:1.16.0'
 
     // Timber
