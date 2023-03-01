@@ -61,6 +61,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
                 when {
                     viewModel.isShowingStickers.value -> viewModel.setIsShowingStickers(false)
                     binding.moderatorView.visibility == View.VISIBLE -> binding.moderatorView.animateVisibility(false)
+                    else -> activity?.finish()
                 }
             }
         })
