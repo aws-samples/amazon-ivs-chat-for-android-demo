@@ -15,6 +15,7 @@ import com.amazon.ivs.chatdemo.common.ItemAnimator
 import com.amazon.ivs.chatdemo.common.KEYBOARD_DELAY
 import com.amazon.ivs.chatdemo.common.SCROLL_DELAY
 import com.amazon.ivs.chatdemo.common.extensions.animateVisibility
+import com.amazon.ivs.chatdemo.common.extensions.collect
 import com.amazon.ivs.chatdemo.common.extensions.countDownTimer
 import com.amazon.ivs.chatdemo.common.extensions.hide
 import com.amazon.ivs.chatdemo.common.extensions.hideKeyboard
@@ -33,7 +34,6 @@ import com.amazon.ivs.chatdemo.ui.adapters.ChatAdapter
 import com.amazon.ivs.chatdemo.ui.adapters.StickerAdapter
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 
 class ChatFragment : Fragment(R.layout.fragment_chat) {
     private val binding by viewBinding(FragmentChatBinding::bind)
@@ -66,23 +66,19 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         })
 
-        launchUI {
-            viewModel.onKicked.collect {
-                viewModel.setIsIntroductionDone(false)
-                viewModel.refreshToken()
-                binding.moderatorView.animateVisibility(false)
-                binding.errorPopup.animateVisibility(true, 100)
-                countDownTimer(5000) {
-                    binding.errorPopup.animateVisibility(false)
-                }.start()
-            }
+        collect(viewModel.onKicked) {
+            viewModel.setIsIntroductionDone(false)
+            viewModel.refreshToken()
+            binding.moderatorView.animateVisibility(false)
+            binding.errorPopup.animateVisibility(true, 100)
+            countDownTimer(5000) {
+                binding.errorPopup.animateVisibility(false)
+            }.start()
         }
 
-        launchUI {
-            viewModel.avatars.collect { avatars ->
-                avatars.firstOrNull { it.isSelected }?.let { avatar ->
-                    binding.inputIcon.loadImage(avatar.url)
-                }
+        collect(viewModel.avatars) { avatars ->
+            avatars.firstOrNull { it.isSelected }?.let { avatar ->
+                binding.inputIcon.loadImage(avatar.url)
             }
         }
     }
@@ -222,58 +218,46 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
 
-        launchUI {
-            viewModel.onMessage.collect { message ->
-                bulletRows[message.first].sendMessage(message.second)
-            }
+        collect(viewModel.onMessage) { message ->
+            bulletRows[message.first].sendMessage(message.second)
         }
 
-        launchUI {
-            viewModel.messages.collect { messages ->
-                chatAdapter.submitList(messages)
-                if (messages.isNotEmpty()) {
-                    launchUI {
-                        delay(SCROLL_DELAY)
-                        binding.chatList.smoothScrollToPosition(messages.size - 1)
-                    }
+        collect(viewModel.messages) { messages ->
+            chatAdapter.submitList(messages)
+            if (messages.isNotEmpty()) {
+                launchUI {
+                    delay(SCROLL_DELAY)
+                    binding.chatList.smoothScrollToPosition(messages.size - 1)
                 }
             }
         }
 
-        launchUI {
-            viewModel.isShowingStickers.collect { isShowing ->
-                if (isShowing) {
-                    binding.inputFile.setImageResource(R.drawable.ic_file_yellow)
-                    stickerLayout.show()
-                } else {
-                    binding.inputFile.setImageResource(R.drawable.ic_file)
-                    stickerLayout.hide()
-                }
+        collect(viewModel.isShowingStickers) { isShowing ->
+            if (isShowing) {
+                binding.inputFile.setImageResource(R.drawable.ic_file_yellow)
+                stickerLayout.show()
+            } else {
+                binding.inputFile.setImageResource(R.drawable.ic_file)
+                stickerLayout.hide()
             }
         }
 
-        launchUI {
-            viewModel.isChatShown.collectLatest { isChatVisible ->
-                binding.chatButton.visibility = if (isChatVisible) View.INVISIBLE else View.VISIBLE
-                binding.inputHolder.visibility = if (isChatVisible) View.VISIBLE else View.GONE
-                binding.inputSend.visibility = if (isChatVisible) View.VISIBLE else View.GONE
+        collect(viewModel.isChatShown) { isChatVisible ->
+            binding.chatButton.visibility = if (isChatVisible) View.INVISIBLE else View.VISIBLE
+            binding.inputHolder.visibility = if (isChatVisible) View.VISIBLE else View.GONE
+            binding.inputSend.visibility = if (isChatVisible) View.VISIBLE else View.GONE
+        }
+
+        collect(viewModel.useBulletChatMode) { useBulletChatMode ->
+            if (useBulletChatMode) {
+                showBulletChat()
+            } else {
+                showRegularChat()
             }
         }
 
-        launchUI {
-            viewModel.useBulletChatMode.collectLatest { useBulletChatMode ->
-                if (useBulletChatMode) {
-                    showBulletChat()
-                } else {
-                    showRegularChat()
-                }
-            }
-        }
-
-        launchUI {
-            viewModel.stickers.collect { stickers ->
-                stickerAdapter.submitList(stickers)
-            }
+        collect(viewModel.stickers) { stickers ->
+            stickerAdapter.submitList(stickers)
         }
     }
 
@@ -298,14 +282,12 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             }
         }
 
-        launchUI {
-            viewModel.showSuccessPopup.collect { resource ->
-                binding.successPopupText.text = getString(resource)
-                binding.successPopup.animateVisibility(true, 100)
-                countDownTimer(5000) {
-                    binding.successPopup.animateVisibility(false)
-                }.start()
-            }
+        collect(viewModel.showSuccessPopup) { resource ->
+            binding.successPopupText.text = getString(resource)
+            binding.successPopup.animateVisibility(true, 100)
+            countDownTimer(5000) {
+                binding.successPopup.animateVisibility(false)
+            }.start()
         }
     }
 }

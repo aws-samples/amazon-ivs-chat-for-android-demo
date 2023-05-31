@@ -9,7 +9,7 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
 import com.amazon.ivs.chatdemo.R
 import com.amazon.ivs.chatdemo.common.AVATARS
-import com.amazon.ivs.chatdemo.common.extensions.launchUI
+import com.amazon.ivs.chatdemo.common.extensions.collect
 import com.amazon.ivs.chatdemo.common.extensions.setWidthPercent
 import com.amazon.ivs.chatdemo.common.viewBinding
 import com.amazon.ivs.chatdemo.databinding.DialogIntroductionBinding
@@ -52,16 +52,12 @@ class IntroductionDialog : DialogFragment(R.layout.dialog_introduction) {
             viewModel.updatePermission(grantPermissions)
         }
 
-        launchUI {
-            viewModel.avatars.collect { avatars ->
-                avatarAdapter.submitList(avatars)
-            }
+        collect(viewModel.avatars) { avatars ->
+            avatarAdapter.submitList(avatars)
         }
 
-        launchUI {
-            viewModel.isLoggedIn.collect { isLoggedIn ->
-                chatButton.isEnabled = isLoggedIn
-            }
+        collect(viewModel.isLoggedIn) { isLoggedIn ->
+            chatButton.isEnabled = isLoggedIn
         }
     }
 }
