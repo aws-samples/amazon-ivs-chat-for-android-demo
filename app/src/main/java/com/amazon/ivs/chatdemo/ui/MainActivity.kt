@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.doOnLayout
 import com.amazon.ivs.chatdemo.common.MEASURE_REPEAT_COUNT
 import com.amazon.ivs.chatdemo.common.MEASURE_REPEAT_DELAY
+import com.amazon.ivs.chatdemo.common.extensions.collect
 import com.amazon.ivs.chatdemo.common.extensions.hideKeyboard
 import com.amazon.ivs.chatdemo.common.extensions.launchUI
 import com.amazon.ivs.chatdemo.common.extensions.onReady
@@ -17,7 +18,6 @@ import com.amazon.ivs.chatdemo.common.extensions.zoomToFit
 import com.amazon.ivs.chatdemo.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.collectLatest
 import timber.log.Timber
 
 @AndroidEntryPoint
@@ -54,33 +54,25 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        launchUI {
-            viewModel.onPlayerError.collect { error ->
-                binding.root.showSnackBar(error.errorMessage)
+        collect(viewModel.onPlayerError) { error ->
+            binding.root.showSnackBar(error.errorMessage)
+        }
+
+        collect(viewModel.playerSize) { size ->
+            if (size == null) return@collect
+            fitSurface(size)
+        }
+
+        collect(viewModel.customUrl) { url ->
+            Timber.d("Playback url changed: $url")
+            viewModel.release()
+            binding.surfaceView.onReady { surface ->
+                viewModel.initPlayer(this@MainActivity, surface)
             }
         }
 
-        launchUI {
-            viewModel.playerSize.collectLatest { size ->
-                if (size == null) return@collectLatest
-                fitSurface(size)
-            }
-        }
-
-        launchUI {
-            viewModel.customUrl.collectLatest { url ->
-                Timber.d("Playback url changed: $url")
-                viewModel.release()
-                binding.surfaceView.onReady { surface ->
-                    viewModel.initPlayer(this@MainActivity, surface)
-                }
-            }
-        }
-
-        launchUI {
-            viewModel.isBuffering.collectLatest { isBuffering ->
-                binding.streamBuffering.visibility = if (isBuffering) View.VISIBLE else View.GONE
-            }
+        collect(viewModel.isBuffering) { isBuffering ->
+            binding.streamBuffering.visibility = if (isBuffering) View.VISIBLE else View.GONE
         }
     }
 

@@ -7,12 +7,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.amazon.ivs.chatdemo.R
-import com.amazon.ivs.chatdemo.common.extensions.launchUI
+import com.amazon.ivs.chatdemo.common.extensions.collect
 import com.amazon.ivs.chatdemo.common.extensions.showInputDialog
 import com.amazon.ivs.chatdemo.common.viewBinding
 import com.amazon.ivs.chatdemo.databinding.FragmentSettingsBinding
 import com.amazon.ivs.chatdemo.ui.MainViewModel
-import kotlinx.coroutines.flow.collectLatest
 
 class SettingsFragment : Fragment(R.layout.fragment_settings) {
     private val binding by viewBinding(FragmentSettingsBinding::bind)
@@ -51,15 +50,12 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             showPopup(false)
         }
 
-        launchUI {
-            viewModel.isUsingCustomUrl.collectLatest { isUsingCustomUrl ->
-                binding.useCustomUrl = isUsingCustomUrl
-            }
+        collect(viewModel.isUsingCustomUrl) { isUsingCustomUrl ->
+            binding.useCustomUrl = isUsingCustomUrl
         }
-        launchUI {
-            viewModel.customUrl.collectLatest { url ->
-                binding.customUrl = url
-            }
+
+        collect(viewModel.customUrl) { url ->
+            binding.customUrl = url
         }
     }
 

@@ -12,16 +12,23 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-fun AppCompatActivity.launchUI(block: suspend CoroutineScope.() -> Unit) = lifecycleScope.launch(
-    context = CoroutineExceptionHandler { _, e -> Timber.e(e, "Coroutine failed: ${e.localizedMessage}") },
-    block = block
-)
+fun AppCompatActivity.launchUI(
+    lifecycleState: Lifecycle.State = Lifecycle.State.STARTED,
+    block: suspend CoroutineScope.() -> Unit
+) = lifecycleScope.launch(
+    context = CoroutineExceptionHandler { _, e ->
+        Timber.e(e, "Coroutine failed: ${e.localizedMessage}")
+    }
+) {
+    repeatOnLifecycle(state = lifecycleState, block = block)
+}
 
 fun Fragment.launchUI(
     lifecycleState: Lifecycle.State = Lifecycle.State.STARTED,
@@ -55,3 +62,23 @@ fun <T> Flow<T>.asSharedFlow(
     coroutineScope: CoroutineScope,
     started: SharingStarted = SharingStarted.WhileSubscribed(5000)
 ) = shareIn(coroutineScope, started)
+
+fun <T> Fragment.collect(
+    flow: Flow<T>,
+    lifecycleState: Lifecycle.State = Lifecycle.State.STARTED,
+    collectLatest: suspend (T) -> Unit
+) {
+    launchUI(lifecycleState) {
+        flow.collectLatest(collectLatest)
+    }
+}
+
+fun <T> AppCompatActivity.collect(
+    flow: Flow<T>,
+    lifecycleState: Lifecycle.State = Lifecycle.State.STARTED,
+    collectLatest: suspend (T) -> Unit
+) {
+    launchUI(lifecycleState) {
+        flow.collectLatest(collectLatest)
+    }
+}
