@@ -43,14 +43,14 @@ object BindingAdapters {
         Glide.with(context)
             .load(resource)
             .listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?,
+                override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>,
                                           isFirstResource: Boolean): Boolean {
                     Timber.d("Failed to load image: $resource")
                     return false
                 }
 
-                override fun onResourceReady(drawable: Drawable?, model: Any?, target: Target<Drawable>?,
-                                             dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+                override fun onResourceReady(drawable: Drawable, model: Any, target: Target<Drawable>,
+                                             dataSource: DataSource, isFirstResource: Boolean): Boolean {
                     animate()
                         .scaleX(ITEM_SCALE_BIG)
                         .scaleY(ITEM_SCALE_BIG)
