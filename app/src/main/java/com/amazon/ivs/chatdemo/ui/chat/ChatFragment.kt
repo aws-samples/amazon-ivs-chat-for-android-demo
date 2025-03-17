@@ -7,6 +7,7 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.doOnLayout
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -60,7 +61,7 @@ class ChatFragment : Fragment(R.layout.fragment_chat) {
             override fun handleOnBackPressed() {
                 when {
                     viewModel.isShowingStickers.value -> viewModel.setIsShowingStickers(false)
-                    binding.moderatorView.visibility == View.VISIBLE -> binding.moderatorView.animateVisibility(false)
+                    binding.moderatorView.isVisible -> binding.moderatorView.animateVisibility(false)
                     else -> activity?.finish()
                 }
             }

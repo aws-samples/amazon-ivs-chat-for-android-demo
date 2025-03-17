@@ -3,18 +3,18 @@ package com.amazon.ivs.chatdemo.repository
 import com.amazon.ivs.chatdemo.common.MESSAGE_EXPIRATION_RETRY_TIME
 import com.amazon.ivs.chatdemo.common.MESSAGE_HISTORY
 import com.amazon.ivs.chatdemo.common.TOKEN_REFRESH_DELAY
-import com.amazon.ivs.chatdemo.repository.managers.ChatManager
 import com.amazon.ivs.chatdemo.common.extensions.onRepeat
 import com.amazon.ivs.chatdemo.common.extensions.updateList
 import com.amazon.ivs.chatdemo.injection.IOScope
-import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageRequest
-import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse
-import com.amazon.ivs.chatdemo.repository.networking.models.MessageViewType
-import com.amazon.ivs.chatdemo.repository.networking.models.Sender
+import com.amazon.ivs.chatdemo.repository.managers.ChatManager
 import com.amazon.ivs.chatdemo.repository.networking.Endpoints
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationAttributes
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationBody
 import com.amazon.ivs.chatdemo.repository.networking.models.AuthenticationResponse
+import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageRequest
+import com.amazon.ivs.chatdemo.repository.networking.models.ChatMessageResponse
+import com.amazon.ivs.chatdemo.repository.networking.models.MessageViewType
+import com.amazon.ivs.chatdemo.repository.networking.models.Sender
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import timber.log.Timber
-import java.util.*
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -183,6 +183,6 @@ class ChatRepository @Inject constructor(
     }
 
     private fun removeUserLocalMessages(messagesToRemove: List<ChatMessageResponse>) {
-        _messages.updateList { removeAll(messagesToRemove) }
+        _messages.updateList { removeAll(messagesToRemove.toSet()) }
     }
 }

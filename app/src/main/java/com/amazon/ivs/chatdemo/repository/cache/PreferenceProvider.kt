@@ -1,6 +1,7 @@
 package com.amazon.ivs.chatdemo.repository.cache
 
 import android.content.Context
+import androidx.core.content.edit
 import com.amazon.ivs.chatdemo.BuildConfig
 import com.amazon.ivs.chatdemo.common.PREFERENCES_NAME
 import kotlin.properties.ReadWriteProperty
@@ -19,7 +20,7 @@ class PreferenceProvider(context: Context) {
         override fun getValue(thisRef: Any?, property: KProperty<*>) = sharedPreferences.getString(property.name, null)
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: String?) {
-            sharedPreferences.edit().putString(property.name, value).apply()
+            sharedPreferences.edit { putString(property.name, value) }
         }
     }
 
@@ -28,7 +29,7 @@ class PreferenceProvider(context: Context) {
             sharedPreferences.getBoolean(property.name, false)
 
         override fun setValue(thisRef: Any?, property: KProperty<*>, value: Boolean) {
-            sharedPreferences.edit().putBoolean(property.name, value).apply()
+            sharedPreferences.edit { putBoolean(property.name, value) }
         }
     }
 }

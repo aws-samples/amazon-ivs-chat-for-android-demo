@@ -1,6 +1,5 @@
 package com.amazon.ivs.chatdemo.common.extensions
 
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import timber.log.Timber
 
