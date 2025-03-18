@@ -18,7 +18,7 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        buildConfigField("String", "STREAM_URL", "\"https://760b256a3da8.us-east-1.playback.live-video.net/api/video/v1/us-east-1.049054135175.channel.6tM2Z9kY16nH.m3u8\"")
+        buildConfigField("String", "STREAM_URL", "\"https://4c62a87c1810.us-west-2.playback.live-video.net/api/video/v1/us-west-2.049054135175.channel.XNWkDNKHdq4u.m3u8\"")
         buildConfigField("String", "API_URL", "\"https://ENTER_YOUR_API_URL_HERE\"")
         buildConfigField("String", "CHAT_ROOM_ID", "\"\"")
     }
