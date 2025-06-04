@@ -1,9 +1,9 @@
 package com.amazon.ivs.chatdemo.ui.chat
 
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.View
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
@@ -30,7 +30,7 @@ class IntroductionDialog : DialogFragment(R.layout.dialog_introduction) {
         super.onViewCreated(view, savedInstanceState)
         // DialogFragment will take up full space if we do not set the width manually
         setWidthPercent(95)
-        dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialog?.window?.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
         isCancelable = false
         setupIntroduction()
     }

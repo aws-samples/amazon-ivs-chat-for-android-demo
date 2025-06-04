@@ -1,9 +1,9 @@
 package com.amazon.ivs.chatdemo.repository.managers
 
 import android.content.Context
-import android.net.Uri
 import android.util.Size
 import android.view.Surface
+import androidx.core.net.toUri
 import com.amazon.ivs.chatdemo.common.MAX_QUALITY
 import com.amazon.ivs.chatdemo.common.extensions.init
 import com.amazon.ivs.chatdemo.repository.cache.PreferenceProvider
@@ -35,7 +35,7 @@ class VideoPlayerManager(
         if (player != null) return
 
         _isBuffering.update { true }
-        player = MediaPlayer(context)
+        player = MediaPlayer.Builder(context).build()
         listener = player!!.init(
             onVideoSizeChanged = { videoSizeState ->
                 _playerSize.update { videoSizeState }
@@ -58,7 +58,7 @@ class VideoPlayerManager(
         )
 
         player?.setSurface(surface)
-        player?.load(Uri.parse(preferenceProvider.playbackUrl))
+        player?.load(preferenceProvider.playbackUrl.toUri())
         player?.play()
         Timber.d("Player initialized: ${preferenceProvider.playbackUrl}")
     }

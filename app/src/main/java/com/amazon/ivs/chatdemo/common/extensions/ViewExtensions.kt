@@ -15,6 +15,8 @@ import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.doOnLayout
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import com.amazon.ivs.chatdemo.R
@@ -118,15 +120,15 @@ fun View.zoomToFit(videoSize: Size, decorView: View) {
     }
 }
 
-fun View.animateVisibility(isVisible: Boolean, duration: Long = 250L) {
-    if ((visibility == View.VISIBLE && isVisible) || (visibility == View.GONE && !isVisible)) return
+fun View.animateVisibility(visible: Boolean, duration: Long = 250L) {
+    if ((isVisible && visible) || (isGone && !visible)) return
     setVisible(true)
-    alpha = if (isVisible) ALPHA_GONE else ALPHA_VISIBLE
-    animate().setDuration(duration).alpha(if (isVisible) ALPHA_VISIBLE else ALPHA_GONE)
+    alpha = if (visible) ALPHA_GONE else ALPHA_VISIBLE
+    animate().setDuration(duration).alpha(if (visible) ALPHA_VISIBLE else ALPHA_GONE)
         .setListener(object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
                 super.onAnimationEnd(animation)
-                setVisible(isVisible)
+                setVisible(visible)
             }
         }).start()
 }
