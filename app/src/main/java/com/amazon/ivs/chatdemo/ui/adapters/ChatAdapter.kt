@@ -79,7 +79,7 @@ class ChatAdapter(
 
     override fun getItemViewType(position: Int) = currentList[position].viewType.index
 
-    private fun View.setListener(viewHolder: ChatAdapter.ViewHolder) {
+    private fun View.setListener(viewHolder: ViewHolder) {
         setOnLongClickListener {
             onItemHold(viewHolder.layoutPosition)
             true
